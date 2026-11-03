@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="算法游乐场：把 A* 寻路与二分查找变成可以亲手操作的小游戏，并阅读 C++ / Java / Python / Go 四种语言的源码解析。" />
+  <meta name="theme-color" content="#f4f8fd" />
+  <title>算法游戏大厅 · 算法游乐场</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23356df3'/%3E%3Cpath d='M8 23v-3a4 4 0 0 1 4-4h8a4 4 0 0 0 4-4V8' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3Ccircle cx='8' cy='23' r='2.4' fill='white'/%3E%3Ccircle cx='24' cy='8' r='2.4' fill='white'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="shared/base.css" />
+  <link rel="stylesheet" href="shared/lobby.css" />
+</head>
+<body data-page="home" data-root=".">
+  <div class="ambient ambient--blue" aria-hidden="true"></div>
+  <div class="ambient ambient--mint" aria-hidden="true"></div>
+  <div class="ambient ambient--coral" aria-hidden="true"></div>
+
+  <main class="app lobby-app">
+    <header id="siteHeader"></header>
+
+    <section class="lobby-hero" aria-labelledby="lobbyHeading">
+      <div class="hero-copy">
+        <span class="hero-badge"><i aria-hidden="true"></i>两个可交互算法实验</span>
+        <h2 class="hero-title" id="lobbyHeading">不止看懂算法，<br /><span>还要把它玩明白。</span></h2>
+        <p class="hero-lead">把最短路径和二分查找变成可以亲手操作的挑战。玩过之后再翻开源码，四语言实现与逐步解析已经准备好了。</p>
+        <div class="hero-chips" aria-label="平台特性">
+          <span>2 个算法游戏</span>
+          <span>4 种语言源码</span>
+          <span>Canvas 动画</span>
+          <span>离线可运行</span>
+        </div>
+      </div>
+
+      <aside class="hero-guide">
+        <div class="guide-head">
+          <p class="kicker">QUICK GUIDE</p>
+          <span>3 STEPS</span>
+        </div>
+        <h2>一次挑战，一次复盘</h2>
+        <p>每个游戏都把算法的运行过程变成了看得见的反馈。</p>
+        <ol class="guide-list">
+          <li>
+            <span class="guide-step">01</span>
+            <div>
+              <strong>挑一个算法</strong>
+              <p>从大厅卡片或左上角的切换菜单进入。</p>
+            </div>
+          </li>
+          <li>
+            <span class="guide-step">02</span>
+            <div>
+              <strong>开始一局游戏</strong>
+              <p>先凭直觉玩一遍，再观察算法如何展开。</p>
+            </div>
+          </li>
+          <li>
+            <span class="guide-step">03</span>
+            <div>
+              <strong>打开源码解析</strong>
+              <p>对照 C++、Java、Python 和 Go 实现理解细节。</p>
+            </div>
+          </li>
+        </ol>
+      </aside>
+    </section>
+
+    <section class="lobby-games" aria-labelledby="selectionTitle">
+      <header class="selection-head">
+        <div>
+          <p class="kicker">CHOOSE A CHALLENGE</p>
+          <h2 id="selectionTitle">选择算法游戏</h2>
+        </div>
+        <span class="selection-count">02 PLAYABLE LABS</span>
+      </header>
+
+      <div class="game-card-grid">
+        <a class="game-card game-card--astar" href="algorithms/astar/index.html" aria-label="进入 A* 寻路实验室">
+          <div class="game-card-top">
+            <span class="game-number">01</span>
+            <span class="game-tag">A* · PATHFINDING</span>
+            <span class="game-card-arrow" aria-hidden="true">
+              <svg viewBox="0 0 20 20" fill="none">
+                <path d="M5 15 15 5M8 5h7v7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+          </div>
+
+          <div class="game-preview preview--astar" aria-hidden="true">
+            <svg viewBox="0 0 320 160" preserveAspectRatio="xMidYMid slice">
+              <defs>
+                <pattern id="lobbyAstarGrid" width="20" height="20" patternUnits="userSpaceOnUse">
+                  <path d="M20 0H0V20" fill="none" stroke="rgba(116, 142, 177, 0.14)" stroke-width="1" />
+                </pattern>
+                <linearGradient id="lobbyAstarRainbow" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#7c5bff" />
+                  <stop offset=".34" stop-color="#29d3c8" />
+                  <stop offset=".65" stop-color="#e4d446" />
+                  <stop offset="1" stop-color="#f1537a" />
+                </linearGradient>
+              </defs>
+              <rect width="320" height="160" fill="#f8fbff" />
+              <rect width="320" height="160" fill="url(#lobbyAstarGrid)" />
+              <g opacity=".55">
+                <rect x="20" y="100" width="17" height="17" rx="3" fill="#9d8cff" />
+                <rect x="40" y="100" width="17" height="17" rx="3" fill="#7ea2ff" />
+                <rect x="60" y="100" width="17" height="17" rx="3" fill="#55b6fa" />
+                <rect x="60" y="80" width="17" height="17" rx="3" fill="#38cdd0" />
+                <rect x="80" y="80" width="17" height="17" rx="3" fill="#3ad2a6" />
+                <rect x="120" y="60" width="17" height="17" rx="3" fill="#8bdb57" />
+                <rect x="140" y="60" width="17" height="17" rx="3" fill="#d5dd4d" />
+                <rect x="160" y="80" width="17" height="17" rx="3" fill="#f0cd4f" />
+                <rect x="180" y="80" width="17" height="17" rx="3" fill="#ffb454" />
+                <rect x="200" y="60" width="17" height="17" rx="3" fill="#ff965a" />
+                <rect x="220" y="60" width="17" height="17" rx="3" fill="#f47772" />
+                <rect x="240" y="40" width="17" height="17" rx="3" fill="#f0617f" />
+              </g>
+              <g fill="#3b4a62" opacity=".92">
+                <rect x="90" y="18" width="18" height="54" rx="5" />
+                <rect x="150" y="18" width="18" height="34" rx="5" />
+                <rect x="210" y="96" width="18" height="46" rx="5" />
+                <rect x="260" y="96" width="18" height="34" rx="5" />
+                <rect x="150" y="116" width="38" height="18" rx="5" />
+                <rect x="40" y="42" width="18" height="35" rx="5" />
+              </g>
+              <path d="M31 128H75V82H137V111H195V56H274" fill="none" stroke="#fff" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M31 128H75V82H137V111H195V56H274" fill="none" stroke="url(#lobbyAstarRainbow)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+              <circle cx="31" cy="128" r="9" fill="#ff7a59" stroke="#fff" stroke-width="3" />
+              <circle cx="274" cy="56" r="9" fill="#ee5d86" stroke="#fff" stroke-width="3" />
+              <circle cx="274" cy="56" r="3.4" fill="#fff" />
+            </svg>
+            <span class="preview-badge"><i aria-hidden="true"></i>20 × 20 · CANVAS</span>
+          </div>
+
+          <div class="game-card-body">
+            <h3>A* 寻路实验室</h3>
+            <p>在 20 × 20 网格上绘制墙壁和端点，看 A* 如何从彩虹般的探索中收回一条最短路径。</p>
+            <div class="game-features">
+              <span>彩虹探索</span>
+              <span>时间轴回放</span>
+              <span>四语言源码</span>
+            </div>
+            <div class="game-card-footer">
+              <span>进入寻路实验室</span>
+              <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path d="M4 10h11M10.5 5.5 15 10l-4.5 4.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </div>
+          </div>
+        </a>
+
+        <a class="game-card game-card--binary" href="algorithms/binary-search/index.html" aria-label="进入二分拆弹游戏">
+          <div class="game-card-top">
+            <span class="game-number">02</span>
+            <span class="game-tag">BINARY SEARCH</span>
+            <span class="game-card-arrow" aria-hidden="true">
+              <svg viewBox="0 0 20 20" fill="none">
+                <path d="M5 15 15 5M8 5h7v7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+          </div>
+
+          <div class="game-preview preview--binary" aria-hidden="true">
+            <div class="mini-bomb">
+              <span class="mini-bomb-time">00:38</span>
+            </div>
+            <div class="mini-binary-info">
+              <span class="mini-label">HIDDEN RANGE</span>
+              <strong>1 – 100</strong>
+              <div class="mini-binary-bar">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+              <p class="mini-binary-hint">猜测 <span>50</span> · 密码更大 ↑</p>
+            </div>
+          </div>
+
+          <div class="game-card-body">
+            <h3>二分拆弹</h3>
+            <p>60 秒倒计时，从 1–100 里猜出隐藏密码。每一次错误猜测都会让一半数字变灰。</p>
+            <div class="game-features">
+              <span>60 秒倒计时</span>
+              <span>排除区间</span>
+              <span>四语言源码</span>
+            </div>
+            <div class="game-card-footer">
+              <span>开始拆弹挑战</span>
+              <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path d="M4 10h11M10.5 5.5 15 10l-4.5 4.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </div>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <div class="lobby-note">
+      <p><strong>全部离线可玩。</strong> 两个游戏都使用原生 HTML、CSS 与 JavaScript 构建，源码与算法解析已内置在对应页面。</p>
+      <span>NO DEPENDENCIES · 4 LANGUAGES</span>
+    </div>
+
+    <footer class="page-footer">
+      <span>Algorithm Playground × Interactive Learning</span>
+      <span>观察 → 操作 → 阅读实现</span>
+    </footer>
+  </main>
+
+  <script src="shared/shell.js" defer></script>
+</body>
+</html>
