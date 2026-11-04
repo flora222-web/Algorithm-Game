@@ -982,12 +982,20 @@
     dom.resultOverlay.hidden = false;
     state.overlayOpen = true;
 
-    if (
-      (!docsViewer || !docsViewer.isOpen()) &&
-      document.activeElement !== dom.timelineSlider
-    ) {
+    if (!docsViewer || !docsViewer.isOpen()) {
       requestAnimationFrame(() => {
-        dom.resultClose.focus({ preventScroll: true });
+        // 窄屏下开始按钮在页面下方，确保结果浮层不会停留在视口之外
+        const cardRect = dom.resultCard.getBoundingClientRect();
+        if (cardRect.top < 8 || cardRect.bottom > window.innerHeight - 8) {
+          dom.resultOverlay.scrollIntoView({
+            block: 'center',
+            behavior: reduceMotion ? 'auto' : 'smooth'
+          });
+        }
+
+        if (document.activeElement !== dom.timelineSlider) {
+          dom.resultClose.focus({ preventScroll: true });
+        }
       });
     }
   }
