@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="二分拆弹：在 60 秒内，用二分查找思想从 1–100 中拆出正确密码。包含实时排除区间与四种语言源码解析。" />
+  <meta name="description" content="二分拆弹：先预测下一次 mid，再用 7 根拆弹线在 1–100 中锁定正确密码。包含 10×10 排爆矩阵、区间状态、猜测历史与四语言源码解析。" />
   <meta name="theme-color" content="#f4f8fd" />
-  <title>二分拆弹 · 二分查找游戏</title>
+  <title>二分拆弹 · 7 根线 × 预测中点</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23e95d6f'/%3E%3Ccircle cx='15' cy='18' r='9' fill='%23fff' opacity='.94'/%3E%3Cpath d='M20 10c2-3 5-3 7-1' fill='none' stroke='%23ffe2a8' stroke-width='2.6' stroke-linecap='round'/%3E%3Ccircle cx='27' cy='8' r='2.2' fill='%23ffc65c'/%3E%3C/svg%3E" />
   <link rel="stylesheet" href="../../shared/base.css" />
   <link rel="stylesheet" href="../../shared/docs.css" />
@@ -42,8 +42,8 @@
             <div class="bomb-body">
               <span class="bomb-shine"></span>
               <div class="bomb-display">
-                <span class="bomb-time" id="bombTime" role="timer">01:00</span>
-                <span class="bomb-time-label">TIME LEFT</span>
+                <span class="bomb-time" id="bombTime">07</span>
+                <span class="bomb-time-label" id="bombTimeLabel">WIRES LEFT</span>
               </div>
             </div>
             <span class="bomb-spark"></span>
@@ -51,12 +51,56 @@
           </div>
 
           <div class="bomb-console">
-            <p class="kicker">DISARM SEQUENCE</p>
-            <h2>猜中密码，停止倒计时</h2>
-            <p class="bomb-lead" id="bombLead">正确数字藏在 1–100 之间。每猜一次，会排除掉一半左右的候选区间。</p>
+            <p class="kicker">DISARM SEQUENCE · TRAINING</p>
+            <h2>7 根线，先算中点再拆弹</h2>
+            <p class="bomb-lead" id="bombLead">密码藏在 1–100 之间。先预测下一次 mid，再提交猜测；7 根线用完前锁定密码。</p>
+
+            <div class="mobile-start-row" id="inlineStartRow">
+              <button class="start-btn start-btn--danger start-btn--inline" id="startBombBtnInline" type="button">
+                <span class="start-icon" aria-hidden="true">
+                  <svg viewBox="0 0 20 20" fill="none">
+                    <circle cx="9.4" cy="11.6" r="5.2" stroke="currentColor" stroke-width="1.6" />
+                    <path d="M13.1 7.4c.5-1 1.4-1.8 2.5-2.1M14.6 8.7l2.2-1.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                    <path d="M8.2 11.6h2.4M9.4 10.4v2.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+                  </svg>
+                </span>
+                <span id="startBombLabelInline">开始拆弹</span>
+              </button>
+              <span class="inline-start-note">训练模式 · 7 根线 · 无倒计时</span>
+            </div>
+
+            <section class="predict-card" id="predictionCard" aria-labelledby="predictTitle">
+              <div class="predict-head">
+                <span class="predict-kicker" id="predictTitle">LEARNING CHECK</span>
+                <span class="predict-badge">预测下一个 mid</span>
+              </div>
+              <form class="predict-form" id="predictForm" novalidate>
+                <label class="predict-label" for="predictInput">下一次 <code>mid</code> 是多少？</label>
+                <div class="predict-row">
+                  <input
+                    class="predict-input"
+                    id="predictInput"
+                    type="number"
+                    inputmode="numeric"
+                    min="1"
+                    max="100"
+                    step="1"
+                    placeholder="先算再填"
+                    autocomplete="off"
+                    aria-describedby="predictFeedback"
+                    disabled
+                  />
+                  <button class="predict-submit" id="predictSubmit" type="submit" disabled>验证</button>
+                </div>
+                <p class="predict-feedback" id="predictFeedback" data-tone="neutral" role="status" aria-live="polite">开局后，用公式算出下一次 mid，再验证。</p>
+              </form>
+            </section>
 
             <form class="guess-form" id="guessForm" novalidate>
-              <label class="guess-label" for="guessInput">输入 1–100 的整数</label>
+              <div class="guess-label-row">
+                <label class="guess-label" for="guessInput">提交猜测 · 1–100</label>
+                <span class="guess-wire-note" id="guessWireNote">拆弹线 7 / 7</span>
+              </div>
               <div class="guess-row">
                 <input
                   class="guess-input"
@@ -73,70 +117,139 @@
                 />
                 <button class="guess-submit" id="guessSubmit" type="submit" disabled>确认</button>
               </div>
-              <p class="guess-help" id="guessHelp">点击右侧「开始拆弹」后开始倒计时。</p>
+              <p class="guess-help" id="guessHelp">点击「开始拆弹」后开始。每轮先预测，再猜测。</p>
             </form>
 
             <div class="feedback-box" id="feedbackBox" data-tone="neutral" role="status" aria-live="polite">
               <span class="feedback-dot" aria-hidden="true"></span>
-              <p id="feedbackText">准备好后点击「开始拆弹」。你有整整 60 秒。</p>
+              <p id="feedbackText">准备好后点击「开始拆弹」。训练模式没有倒计时，只有 7 根线。</p>
             </div>
           </div>
         </div>
+
+        <section class="wire-panel" id="wirePanel" aria-labelledby="wireTitle" data-state="full">
+          <div class="wire-head">
+            <div>
+              <p class="kicker">WIRE BANK</p>
+              <h3 id="wireTitle">7 根拆弹线</h3>
+            </div>
+            <span class="wire-count" id="wireCount">7 / 7</span>
+          </div>
+          <ol class="wire-strip" id="wireStrip" aria-label="7 根拆弹线状态"></ol>
+          <p class="wire-note" id="wireNote">每局 7 根线，对应 7 次机会。每次合法猜测占用 1 根；猜错即剪断，线耗尽则爆炸。</p>
+        </section>
 
         <section class="bomb-range-panel" aria-labelledby="rangeTitle">
           <div class="range-head">
             <div>
-              <p class="kicker">ELIMINATION MAP</p>
-              <h3 id="rangeTitle">排除进度</h3>
+              <p class="kicker">EOD MATRIX · 10 × 10</p>
+              <h3 id="rangeTitle">排爆矩阵</h3>
             </div>
             <span class="candidate-badge" id="candidateBadge">候选 1–100</span>
           </div>
 
-          <div class="number-track-wrap">
+          <div class="matrix-frame">
+            <span class="matrix-corner matrix-corner--tl" aria-hidden="true"></span>
+            <span class="matrix-corner matrix-corner--tr" aria-hidden="true"></span>
+            <span class="matrix-corner matrix-corner--bl" aria-hidden="true"></span>
+            <span class="matrix-corner matrix-corner--br" aria-hidden="true"></span>
             <div
-              class="number-track"
-              id="numberTrack"
+              class="number-matrix"
+              id="numberMatrix"
               role="img"
-              aria-label="1 到 100 的候选数字范围，全部数字仍在候选中"
+              aria-label="1 到 100 的排爆矩阵，全部数字仍在候选中"
             ></div>
-            <div class="range-scale" aria-hidden="true">
-              <span>1</span>
-              <span>25</span>
-              <span>50</span>
-              <span>75</span>
-              <span>100</span>
-            </div>
           </div>
 
-          <div class="range-legend" aria-hidden="true">
-            <span><i class="range-key range-key--live"></i>候选区</span>
-            <span><i class="range-key range-key--out"></i>已排除</span>
-            <span><i class="range-key range-key--guess"></i>猜过</span>
-            <span><i class="range-key range-key--target"></i>正确密码</span>
+          <div class="range-legend">
+            <span><i class="range-key range-key--live" aria-hidden="true"></i>候选</span>
+            <span><i class="range-key range-key--out" aria-hidden="true"></i>已排除</span>
+            <span><i class="range-key range-key--guess" aria-hidden="true"></i>猜过</span>
+            <span><i class="range-key range-key--target" aria-hidden="true"></i>答案</span>
+            <span class="range-hint">点击候选格可填入猜测</span>
           </div>
         </section>
 
-        <div class="guess-history">
-          <span class="guess-history-label">猜测记录</span>
-          <div class="guess-chips" id="guessChips">
-            <span class="guess-empty">还没有猜测</span>
-          </div>
-        </div>
-
-        <div class="bomb-result-overlay" id="bombResultOverlay" hidden>
-          <div class="bomb-result-card" role="dialog" aria-labelledby="bombResultTitle" aria-describedby="bombResultMessage">
-            <div class="bomb-result-icon" id="bombResultIcon" aria-hidden="true"></div>
-            <p class="eyebrow" id="bombResultKicker">BOMB DEFUSED</p>
-            <h2 id="bombResultTitle">拆弹成功！</h2>
-            <p id="bombResultMessage">你找到了正确的密码。</p>
-            <div class="bomb-result-stats">
-              <div><span>密码</span><strong id="bombResultTarget">--</strong></div>
-              <div><span>猜测次数</span><strong id="bombResultGuesses">0</strong></div>
-              <div><span>剩余时间</span><strong id="bombResultTime">00:00</strong></div>
+        <section class="state-panel" aria-labelledby="stateTitle">
+          <div class="panel-mini-head">
+            <div>
+              <p class="kicker">STATE VECTOR</p>
+              <h3 id="stateTitle">区间状态</h3>
             </div>
-            <button class="bomb-result-action" id="bombResultAction" type="button">再拆一颗</button>
+            <span class="state-note">训练模式 · 无倒计时</span>
           </div>
-        </div>
+
+          <div class="state-grid">
+            <div class="state-tile">
+              <span>low</span>
+              <strong id="stateLow">1</strong>
+            </div>
+            <div class="state-tile">
+              <span>high</span>
+              <strong id="stateHigh">100</strong>
+            </div>
+            <div class="state-tile state-tile--mid">
+              <span>mid · 下一次中点</span>
+              <strong id="stateMid">50</strong>
+            </div>
+            <div class="state-tile">
+              <span>remaining</span>
+              <strong id="stateRemaining">100</strong>
+              <small>个候选</small>
+            </div>
+            <div class="state-tile state-tile--invariant">
+              <span>invariant</span>
+              <strong id="stateInvariant">✓ 成立</strong>
+              <small id="stateInvariantRange">secret ∈ [1, 100]</small>
+            </div>
+            <div class="state-tile state-tile--wires">
+              <span>wires</span>
+              <strong id="stateWires">7 / 7</strong>
+            </div>
+          </div>
+
+          <p class="mid-formula" id="midFormula">
+            <span class="formula-rule" id="midFormulaRule">mid = low + floor((high − low) / 2)</span>
+            <span class="formula-calc" id="midFormulaCalc">= 1 + floor((100 − 1) / 2) = 50</span>
+          </p>
+        </section>
+
+        <section class="history-panel" aria-labelledby="historyTitle">
+          <div class="panel-mini-head">
+            <div>
+              <p class="kicker">COMPARE LOG</p>
+              <h3 id="historyTitle">猜测历史</h3>
+            </div>
+            <span class="history-count" id="historyCount">0 次</span>
+          </div>
+
+          <div class="history-wrap">
+            <table class="guess-table" id="guessTable">
+              <colgroup>
+                <col style="width: 18%" />
+                <col style="width: 18%" />
+                <col style="width: 22%" />
+                <col style="width: 19%" />
+                <col style="width: 23%" />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th scope="col">猜测</th>
+                  <th scope="col">反馈</th>
+                  <th scope="col">新区间</th>
+                  <th scope="col">剩余候选</th>
+                  <th scope="col">本次排除</th>
+                </tr>
+              </thead>
+              <tbody id="guessTableBody">
+                <tr class="history-empty">
+                  <td colspan="5">还没有猜测 · 先预测下一次 mid</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
       </section>
 
       <aside class="sidebar">
@@ -197,9 +310,21 @@
             </div>
           </div>
 
+          <div class="predict-summary">
+            <div class="predict-summary-head">
+              <span>预测正确率</span>
+              <span class="predict-summary-record" id="predictionRecord">0 / 0 次</span>
+            </div>
+            <div class="predict-summary-value">
+              <strong id="predictionAccuracy">—</strong>
+            </div>
+            <div class="predict-meter" aria-hidden="true"><span id="predictMeterFill"></span></div>
+            <p class="predict-summary-note">每次验证“下一个 mid”都会写入本地学习记录。</p>
+          </div>
+
           <div class="data-foot">
             <span>最优策略 / 每次折半</span>
-            <code>O(log n)</code>
+            <code>⌈log₂100⌉ = 7</code>
           </div>
         </section>
 
@@ -226,16 +351,17 @@
           </button>
 
           <div class="bomb-rules">
-            <p class="bomb-rules-title">60 秒拆弹规则</p>
+            <p class="bomb-rules-title">7 根线拆弹规则</p>
             <ol>
-              <li><b>点击开始</b>后，倒计时才正式启动。</li>
-              <li>每次猜测都会告诉你是<b>偏大还是偏小</b>，被排除的区间会变灰。</li>
-              <li>在时间耗尽前猜中密码；否则炸弹会直接爆炸。</li>
+              <li><b>点击开始</b>后随机锁定 1–100 的密码；训练模式没有倒计时。</li>
+              <li>先预测下一次 <b>mid</b>：用 <code>low + floor((high − low) / 2)</code> 计算。</li>
+              <li>提交 1–100 的猜测；每次合法猜测占用一根线，猜错就会<b>剪断它</b>。</li>
+              <li>7 根线耗尽即爆炸；在最后一根线上命中仍然算拆弹成功。</li>
             </ol>
           </div>
 
           <p class="shortcut-note">
-            输入数字后按 <kbd>Enter</kbd> 提交猜测
+            <kbd>Enter</kbd> 提交输入框 · <kbd>Esc</kbd> 关闭弹层
           </p>
 
           <button class="source-btn" id="openDocsBtn" type="button" aria-haspopup="dialog">
@@ -257,10 +383,25 @@
     </div>
 
     <footer class="page-footer">
-      <span>Binary Search × 60 Seconds</span>
-      <span>灰色 = 已排除区间 · 每次正确比较都会砍掉一半</span>
+      <span>Binary Search × 7 Wires</span>
+      <span>先预测 mid · 再收紧区间 · 别剪断最后一根线</span>
     </footer>
   </main>
+
+  <div class="bomb-result-overlay" id="bombResultOverlay" hidden>
+    <div class="bomb-result-card" role="dialog" aria-modal="true" aria-labelledby="bombResultTitle" aria-describedby="bombResultMessage">
+      <div class="bomb-result-icon" id="bombResultIcon" aria-hidden="true"></div>
+      <p class="eyebrow" id="bombResultKicker">BOMB DEFUSED</p>
+      <h2 id="bombResultTitle">拆弹成功！</h2>
+      <p id="bombResultMessage">你找到了正确的密码。</p>
+      <div class="bomb-result-stats">
+        <div><span>密码</span><strong id="bombResultTarget">--</strong></div>
+        <div><span>猜测次数</span><strong id="bombResultGuesses">0</strong></div>
+        <div><span>剩余线路</span><strong id="bombResultTime">7 / 7</strong></div>
+      </div>
+      <button class="bomb-result-action" id="bombResultAction" type="button">再拆一颗</button>
+    </div>
+  </div>
 
   <dialog class="switch-dialog" id="switchDialog" aria-labelledby="switchTitle" aria-describedby="switchMessage">
     <div class="switch-dialog-card">
@@ -282,6 +423,7 @@
   </dialog>
 
   <div class="screen-flash" id="screenFlash" aria-hidden="true"></div>
+  <div class="bomb-toast" id="bombToast" role="status" aria-live="polite" hidden></div>
 
   <template id="binaryDocsAnalysis">
     <div class="formula-card">
@@ -289,33 +431,33 @@
       <div class="formula formula--compact">mid <span>=</span> low <span>+</span> ⌊(high − low) / 2⌋</div>
       <div class="formula-parts">
         <span><b>low / high</b> 当前候选区间的左右边界</span>
-        <span><b>mid</b> 下一次最优猜测</span>
+        <span><b>mid</b> 下一次最优猜测，也是先预测、后验证的目标</span>
       </div>
     </div>
 
     <section class="analysis-section">
       <p class="analysis-kicker">HOW IT WORKS</p>
-      <h3>五步理解二分查找</h3>
+      <h3>五步理解这个学习闭环</h3>
       <ol class="step-list">
         <li>
           <strong>初始化候选区间</strong>
-          <p>从 <code>low = 1</code>、<code>high = 100</code> 开始。未验证的秘密数字一定在这个区间里。</p>
+          <p>从 <code>low = 1</code>、<code>high = 100</code> 开始，同时拿到 7 根拆弹线。未验证的密码一定在这个区间里。</p>
         </li>
         <li>
-          <strong>每次猜中点</strong>
-          <p>计算 <code>mid</code> 并猜测它。选择中点可以让最坏情况下的剩余候选数尽可能少。</p>
+          <strong>先预测下一次 mid</strong>
+          <p>用公式 <code>mid = low + floor((high − low) / 2)</code> 自己算一遍，再验证。预测不替代猜测，只是一次学习检查。</p>
         </li>
         <li>
-          <strong>根据比较结果丢掉一半</strong>
-          <p>猜小了，就把 <code>low</code> 移到 <code>mid + 1</code>；猜大了，就把 <code>high</code> 移到 <code>mid - 1</code>。</p>
+          <strong>提交猜测并读取反馈</strong>
+          <p>猜小了就把 <code>low</code> 移到 <code>mid + 1</code>；猜大了就把 <code>high</code> 移到 <code>mid − 1</code>。排爆矩阵同步高亮候选、排除和猜过的数字。</p>
         </li>
         <li>
-          <strong>命中就停止</strong>
-          <p>一旦 <code>mid == secret</code>，拆弹成功。若时间耗尽仍未命中，炸弹爆炸。</p>
+          <strong>为错误付出线材</strong>
+          <p>每次合法错误猜测都会剪断一根线。7 根线耗尽，炸弹爆炸；但若在最后一根线上命中，仍然算拆弹成功。</p>
         </li>
         <li>
-          <strong>重复直到区间为空</strong>
-          <p>正常情况下目标始终在区间内，不会为空。若搜索一个不在范围里的目标，则 low 会越过 high，返回未找到。</p>
+          <strong>重复直到命中</strong>
+          <p>正常情况下密码始终留在区间内，所以 low 不会越过 high。按中点策略，最坏情况 ⌈log₂100⌉ = 7 次比较即可命中。</p>
         </li>
       </ol>
     </section>
@@ -327,7 +469,7 @@
         <div>
           <span>最坏时间</span>
           <strong>O(log n)</strong>
-          <small>n = 100 时最多约 7 次</small>
+          <small>n = 100 时最多 7 次</small>
         </div>
         <div>
           <span>额外空间</span>
@@ -335,7 +477,7 @@
           <small>只维护 low / high</small>
         </div>
       </div>
-      <p class="analysis-copy">每轮候选数量至少减半：100 → 50 → 25 → 12 → 6 → 3 → 1，因此最多只需要 ⌈log₂ 100⌉ = 7 次比较。本游戏允许任意猜测，但按照中点策略可以稳定在 7 次内完成。</p>
+      <p class="analysis-copy">每轮候选数量至少减半：100 → 50 → 25 → 12 → 6 → 3 → 1，因此最多只需要 7 次比较。本页的 7 根线正好对应这个最坏情况预算。</p>
     </section>
 
     <section class="analysis-section">
@@ -351,7 +493,7 @@
       <ul class="visual-notes">
         <li><i class="visual-swatch visual-swatch--warm"></i><span><b>暖色格子</b>：仍可能是答案的候选区间。</span></li>
         <li><i class="visual-swatch visual-swatch--muted"></i><span><b>灰色格子</b>：已被比较结果排除的数字。</span></li>
-        <li><i class="visual-swatch visual-swatch--guess"></i><span><b>深色小点</b>：已经猜过的数字；外圈标记最近一次猜测。</span></li>
+        <li><i class="visual-swatch visual-swatch--guess"></i><span><b>深色格子</b>：已经猜过的数字；珊瑚色外圈标记最近一次猜测。</span></li>
         <li><i class="visual-swatch visual-swatch--target"></i><span><b>高亮终点格</b>：揭晓的正确密码；拆弹成功时为绿色，爆炸时为红色。</span></li>
       </ul>
     </section>
@@ -362,6 +504,9 @@
   <script src="../../shared/shell.js" defer></script>
   <script src="../../shared/docs-viewer.js" defer></script>
   <script src="binary-search-docs.js" defer></script>
+  <script src="../../shared/progress.js" defer></script>
+  <script src="../../shared/trace.js" defer></script>
+  <script src="binary-engine.js" defer></script>
   <script src="binary-search.js" defer></script>
 </body>
 </html>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="A* 寻路实验室：在 20×20 网格中绘制障碍，观察最短路径、彩虹探索回放，并查看 C++ / Java / Python / Go 源码解析。" />
+  <meta name="description" content="A* 寻路实验室：先预测路径步数，再按事件单步验证语义视图。在 20×20 网格中绘制障碍，观察开放集、已扩展节点与最短路径，并查看 C++ / Java / Python / Go 源码解析。" />
   <meta name="theme-color" content="#f4f8fd" />
   <title>寻路实验室 · A* 寻路</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23356df3'/%3E%3Cpath d='M8 23v-3a4 4 0 0 1 4-4h8a4 4 0 0 0 4-4V8' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3Ccircle cx='8' cy='23' r='2.4' fill='white'/%3E%3Ccircle cx='24' cy='8' r='2.4' fill='white'/%3E%3C/svg%3E" />
@@ -38,7 +38,7 @@
           <canvas
             id="gridCanvas"
             role="img"
-            aria-label="20 乘 20 的寻路网格。使用左侧工具后，点击或拖拽鼠标编辑地图，按回车键开始寻路。"
+            aria-label="20 乘 20 的寻路网格。使用工具后，点击或拖拽鼠标编辑地图，按回车键开始寻路。"
             aria-describedby="boardHelp"
           ></canvas>
 
@@ -51,8 +51,10 @@
               <div class="result-stats">
                 <div><span>步数</span><strong id="resultSteps">0</strong></div>
                 <div><span>探索节点</span><strong id="resultExplored">0</strong></div>
-                <div><span>用时</span><strong id="resultTime">0.00s</strong></div>
+                <div><span>算法耗时</span><strong id="resultTime">0.00 ms</strong></div>
               </div>
+              <p class="result-prediction" id="resultPrediction" hidden></p>
+              <p class="result-timers" id="resultTimers"></p>
               <button class="result-close" id="resultClose" type="button">
                 <span id="resultCloseLabel">继续探索</span>
                 <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -65,7 +67,7 @@
           <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
         </div>
 
-        <section class="playback-panel" id="playbackPanel" data-state="empty" aria-label="寻路过程回放">
+        <section class="playback-panel" id="playbackPanel" data-state="empty" data-view="semantic" aria-label="寻路事件回放">
           <div class="playback-head">
             <div class="playback-title">
               <span class="playback-icon" aria-hidden="true">
@@ -76,8 +78,8 @@
                 </svg>
               </span>
               <div class="playback-title-copy">
-                <span class="playback-label">寻路过程</span>
-                <span class="playback-meta" id="playbackMeta">完成一次寻路后，可拖动进度查看</span>
+                <span class="playback-label">事件回放</span>
+                <span class="playback-meta" id="playbackMeta">完成一次寻路后，按事件单步验证</span>
               </div>
             </div>
             <span class="playback-readout" id="playbackReadout">等待寻路</span>
@@ -88,14 +90,44 @@
               id="timelineSlider"
               type="range"
               min="0"
-              max="1000"
+              max="0"
               value="0"
               step="1"
-              aria-label="寻路过程进度条，拖动可回放探索过程"
+              aria-label="寻路事件进度，拖动可查看任意事件状态"
               disabled
             />
             <div class="playback-rail" aria-hidden="true">
               <span class="playback-rainbow"></span>
+            </div>
+          </div>
+          <div class="playback-controls">
+            <div class="step-group" role="group" aria-label="事件单步控制">
+              <button class="step-btn" id="stepBackBtn" type="button" disabled title="上一个事件（←）">
+                <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                  <path d="M12.5 4.5 6.5 10l6 5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <span>上一步</span>
+              </button>
+              <button class="step-btn step-btn--play" id="playPauseBtn" type="button" disabled title="播放或暂停（空格）">
+                <svg class="play-glyph" id="playIcon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                  <path d="M7.2 5.2 14.6 10l-7.4 4.8V5.2Z" fill="currentColor" />
+                </svg>
+                <svg class="play-glyph" id="pauseIcon" viewBox="0 0 20 20" fill="none" aria-hidden="true" hidden>
+                  <path d="M7 5.2v9.6M13 5.2v9.6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" />
+                </svg>
+                <span id="playPauseLabel">播放</span>
+              </button>
+              <button class="step-btn" id="stepNextBtn" type="button" disabled title="下一个事件（→）">
+                <span>下一步</span>
+                <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                  <path d="M7.5 4.5 13.5 10l-6 5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </button>
+            </div>
+            <div class="speed-group" role="group" aria-label="播放速度">
+              <button class="speed-btn is-active" type="button" data-speed="1" aria-pressed="true">1x</button>
+              <button class="speed-btn" type="button" data-speed="2" aria-pressed="false">2x</button>
+              <button class="speed-btn" type="button" data-speed="4" aria-pressed="false">4x</button>
             </div>
           </div>
         </section>
@@ -105,12 +137,27 @@
             <span class="hint-dot" aria-hidden="true"></span>
             <span id="hintText">按住左键拖拽绘制墙壁，右键可快速擦除。</span>
           </p>
-          <div class="legend" aria-label="地图图例">
-            <span><i class="swatch swatch--start"></i>起点</span>
-            <span><i class="swatch swatch--end"></i>终点</span>
-            <span><i class="swatch swatch--wall"></i>墙壁</span>
-            <span class="legend-gradient" title="紫色最早探索，粉色最晚探索">探索顺序<em>早</em><i></i><em>晚</em></span>
-            <span><i class="swatch swatch--path"></i>最短路径</span>
+          <div class="legend-panel">
+            <div class="view-switch" role="group" aria-label="探索视图模式">
+              <button class="view-btn is-active" id="semanticViewBtn" type="button" data-view="semantic" aria-pressed="true">语义视图</button>
+              <button class="view-btn" id="rainbowViewBtn" type="button" data-view="rainbow" aria-pressed="false">彩虹探索</button>
+            </div>
+            <div class="legend" id="semanticLegend" aria-label="语义视图图例">
+              <span><i class="swatch swatch--closed"></i>已扩展</span>
+              <span><i class="swatch swatch--open"></i>开放集</span>
+              <span><i class="swatch swatch--current"></i>当前节点</span>
+              <span><i class="swatch swatch--path"></i>路径</span>
+              <span><i class="swatch swatch--start"></i>起点</span>
+              <span><i class="swatch swatch--end"></i>终点</span>
+              <span><i class="swatch swatch--wall"></i>墙壁</span>
+            </div>
+            <div class="legend" id="rainbowLegend" aria-label="彩虹探索图例" hidden>
+              <span><i class="swatch swatch--start"></i>起点</span>
+              <span><i class="swatch swatch--end"></i>终点</span>
+              <span><i class="swatch swatch--wall"></i>墙壁</span>
+              <span class="legend-gradient" title="紫色最早探索，粉色最晚探索">探索顺序<em>早</em><i></i><em>晚</em></span>
+              <span><i class="swatch swatch--path"></i>最短路径</span>
+            </div>
           </div>
         </footer>
       </section>
@@ -122,56 +169,49 @@
               <span class="section-index" aria-hidden="true">02</span>
               <div>
                 <p class="kicker">LIVE DATA</p>
-                <h2 id="dataTitle">本局数据</h2>
+                <h2 id="dataTitle">本局状态</h2>
               </div>
             </div>
-            <span class="live-tag"><i aria-hidden="true"></i>LIVE</span>
+            <span class="live-tag"><i aria-hidden="true"></i>TRACE</span>
           </header>
 
-          <div class="stat-list">
-            <div class="stat-row stat-row--steps">
-              <span class="stat-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none">
-                  <path d="M5 18.5c5.5 0 3.3-13 14-13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
-                  <circle cx="5" cy="18.5" r="2.2" fill="currentColor" />
-                  <circle cx="19" cy="5.5" r="2.2" fill="currentColor" />
-                </svg>
-              </span>
-              <div class="stat-copy">
-                <span class="stat-label">寻路步数</span>
-                <span class="stat-note">抵达终点的移动次数</span>
-              </div>
-              <div class="stat-value"><strong id="stepsValue">0</strong><span>步</span></div>
+          <div class="state-hero">
+            <div class="state-node">
+              <span class="state-node-label">当前节点</span>
+              <strong id="currentNodeValue">—</strong>
+              <span class="state-phase" id="phaseValue">等待开始</span>
             </div>
-
-            <div class="stat-row stat-row--explored">
-              <span class="stat-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none">
-                  <circle cx="6" cy="6.5" r="2.2" stroke="currentColor" stroke-width="1.7" />
-                  <circle cx="18" cy="6.5" r="2.2" stroke="currentColor" stroke-width="1.7" />
-                  <circle cx="12" cy="17.5" r="2.2" stroke="currentColor" stroke-width="1.7" />
-                  <path d="m8 7.5 2.5 7.5M16 7.5 13.5 15M8.2 6.5h7.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-                </svg>
-              </span>
-              <div class="stat-copy">
-                <span class="stat-label">探索节点数</span>
-                <span class="stat-note">A* 实际访问的格子</span>
-              </div>
-              <div class="stat-value"><strong id="exploredValue">0</strong><span>个</span></div>
+            <div class="score-pills" aria-label="当前节点评分">
+              <span>g<b id="gValue">0</b></span>
+              <span>h<b id="hValue">0</b></span>
+              <span>f<b id="fValue">0</b></span>
             </div>
+          </div>
 
-            <div class="stat-row stat-row--time">
-              <span class="stat-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12.5" r="7.2" stroke="currentColor" stroke-width="1.8" />
-                  <path d="M12 8.7v4.2l2.8 1.6M9.5 3.7h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-              </span>
-              <div class="stat-copy">
-                <span class="stat-label">计时器</span>
-                <span class="stat-note">从出发到抵达的用时</span>
-              </div>
-              <div class="stat-value"><strong id="timerValue">0.00</strong><span>s</span></div>
+          <div class="stat-grid">
+            <div class="stat-tile">
+              <span>开放集</span>
+              <strong id="openValue">0</strong>
+            </div>
+            <div class="stat-tile">
+              <span>已扩展</span>
+              <strong id="exploredValue">0</strong>
+            </div>
+            <div class="stat-tile">
+              <span>路径步数</span>
+              <strong id="stepsValue">0</strong>
+            </div>
+            <div class="stat-tile">
+              <span>事件进度</span>
+              <strong id="eventValue">0/0</strong>
+            </div>
+            <div class="stat-tile stat-tile--algo">
+              <span>算法计算</span>
+              <strong id="algoMsValue">0.00</strong><em>ms</em>
+            </div>
+            <div class="stat-tile stat-tile--anim">
+              <span>动画耗时</span>
+              <strong id="timerValue">0.00</strong><em>s</em>
             </div>
           </div>
 
@@ -179,12 +219,47 @@
             <span>算法 / 启发函数</span>
             <code>A* · Manhattan</code>
           </div>
+          <p class="data-note">算法 ms 来自引擎 metrics.computeMs；动画秒数为播放累计，两者分开计时。</p>
+        </section>
+
+        <section class="card predict-card" aria-labelledby="predictTitle">
+          <header class="panel-head">
+            <div class="section-title">
+              <span class="section-index" aria-hidden="true">03</span>
+              <div>
+                <p class="kicker">PREDICT</p>
+                <h2 id="predictTitle">先预测，再验证</h2>
+              </div>
+            </div>
+          </header>
+
+          <label class="predict-label" for="predictionInput">预测路径步数</label>
+          <div class="predict-field">
+            <input
+              id="predictionInput"
+              class="predict-input"
+              type="number"
+              min="-1"
+              step="1"
+              inputmode="numeric"
+              placeholder="例如 13"
+              aria-describedby="predictHint"
+            />
+            <span class="predict-unit">步</span>
+          </div>
+          <p class="predict-hint" id="predictHint">无路可走时填 -1；留空则不记录本次预测。</p>
+
+          <div class="predict-result" id="predictionResult" hidden>
+            <span id="predictionResultText">—</span>
+            <strong class="prediction-verdict is-neutral" id="predictionVerdict">—</strong>
+          </div>
+          <p class="predict-stats" id="predictionStats">历史预测正确率 —</p>
         </section>
 
         <section class="card control-card" aria-labelledby="controlTitle">
           <header class="panel-head">
             <div class="section-title">
-              <span class="section-index" aria-hidden="true">03</span>
+              <span class="section-index" aria-hidden="true">04</span>
               <div>
                 <p class="kicker">PLAY</p>
                 <h2 id="controlTitle">绘制与出发</h2>
@@ -243,7 +318,7 @@
                 <path d="M7.2 5.4 14.5 10l-7.3 4.6V5.4Z" fill="currentColor" />
               </svg>
             </span>
-            <span id="startLabel">开始寻路</span>
+            <span id="startLabel">开始并验证</span>
             <kbd>Enter</kbd>
           </button>
 
@@ -263,7 +338,7 @@
           </div>
 
           <p class="shortcut-note">
-            快捷键 <kbd>1</kbd>–<kbd>4</kbd> 切换工具 · <kbd>R</kbd> 随机地图 · <kbd>C</kbd> 清空
+            快捷键 <kbd>1</kbd>–<kbd>4</kbd> 工具 · <kbd>R</kbd> 随机 · <kbd>C</kbd> 清空 · <kbd>Space</kbd> 播放 · <kbd>←</kbd><kbd>→</kbd> 单步
           </p>
 
           <button class="source-btn" id="openDocsBtn" type="button" aria-haspopup="dialog">
@@ -286,7 +361,7 @@
 
     <footer class="page-footer">
       <span>A* Pathfinding × HTML Canvas</span>
-      <span>彩虹色 = 探索顺序 · 拖动进度条可回放</span>
+      <span>默认语义视图 · 按事件单步验证开放集与已扩展节点</span>
     </footer>
   </main>
 
@@ -356,9 +431,11 @@
       <p class="analysis-kicker">ON SCREEN</p>
       <h3>和本页可视化对照</h3>
       <ul class="visual-notes">
-        <li><i class="visual-swatch visual-swatch--rainbow"></i><span><b>彩虹格</b>：节点被扩展的先后顺序，紫色最早、粉色最晚。</span></li>
-        <li><i class="visual-swatch visual-swatch--route"></i><span><b>深色高亮路线</b>：从终点沿 parent 回溯得到的最短路径。</span></li>
-        <li><i class="visual-swatch visual-swatch--timeline"></i><span><b>底部进度条</b>：寻路完成后拖动，逐帧查看探索与回溯。</span></li>
+        <li><i class="visual-swatch visual-swatch--semantic"></i><span><b>蓝绿格</b>：已经扩展（closed）的节点，颜色由蓝到青表示先后顺序。</span></li>
+        <li><i class="visual-swatch visual-swatch--open"></i><span><b>虚线框</b>：当前开放集（frontier）中 f 最小的前 5 个节点。</span></li>
+        <li><i class="visual-swatch visual-swatch--current"></i><span><b>高亮环</b>：本事件刚刚从开放集弹出的当前节点。</span></li>
+        <li><i class="visual-swatch visual-swatch--route"></i><span><b>深色线</b>：从终点沿 parent 回溯出的最短路径；切到“彩虹探索”可看旧的探索顺序配色。</span></li>
+        <li><i class="visual-swatch visual-swatch--timeline"></i><span><b>事件滑块</b>：按事件索引单步或拖动，不会重新运行搜索。</span></li>
       </ul>
     </section>
   </template>
@@ -368,6 +445,9 @@
   <script src="../../shared/shell.js" defer></script>
   <script src="../../shared/docs-viewer.js" defer></script>
   <script src="astar-docs.js" defer></script>
+  <script src="../../shared/progress.js" defer></script>
+  <script src="../../shared/trace.js" defer></script>
+  <script src="astar-engine.js" defer></script>
   <script src="astar.js" defer></script>
 </body>
 </html>

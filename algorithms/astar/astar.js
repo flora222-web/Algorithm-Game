@@ -1,18 +1,19 @@
 'use strict';
 
 /**
- * 寻路实验室
+ * 寻路实验室 · A* UI 层
  * ------------------------------------------------------------
- * A* 算法 + Canvas 可视化。
- * 交互：选择工具后点击/拖拽编辑地图，Enter 或按钮开始寻路。
+ * 纯算法、事件流和随机地图都由 window.AStarEngine 提供；
+ * 本文件只负责地图编辑、事件级回放、语义/彩虹绘制、预测与结果展示。
  */
 (() => {
   // =========================================================
-  // 常量
+  // 常量与引擎引用
   // =========================================================
 
-  const GRID_SIZE = 20;
-  const CELL_COUNT = GRID_SIZE * GRID_SIZE;
+  const Engine = window.AStarEngine;
+  const GRID_SIZE = Number(Engine && Engine.GRID_SIZE) || 20;
+  const CELL_COUNT = Number(Engine && Engine.CELL_COUNT) || GRID_SIZE * GRID_SIZE;
 
   const TOOL_INFO = {
     wall: '按住左键拖拽绘制墙壁，右键可快速擦除。',
@@ -21,7 +22,7 @@
     erase: '点击或拖拽格子，擦掉不需要的墙壁。'
   };
 
-  // 探索顺序色板：紫色最早、粉色最晚，完整跨越彩虹光谱
+  // 彩虹模式沿用原有探索顺序色板：紫色最早、粉色最晚
   const RAINBOW_STOPS = [
     [124, 91, 255],
     [77, 156, 255],
@@ -31,6 +32,9 @@
     [255, 158, 72],
     [241, 83, 122]
   ];
+
+  const SEMANTIC_FROM = [77, 156, 255];
+  const SEMANTIC_TO = [32, 190, 170];
 
   const ICONS = {
     success: `
@@ -43,19 +47,20 @@
       </svg>`
   };
 
-  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  const TIMING = {
-    exploreMin: 620,
-    exploreMax: 1500,
-    explorePerNode: 8,
-    reveal: 190,
-    traceLead: 170,
-    traceMin: 340,
-    traceMax: 950,
-    tracePerStep: 38,
-    failureHold: 320
+  const PLAYBACK = {
+    targetMs: 2600,
+    minStepMs: 24,
+    maxStepMs: 140
   };
+
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const traceUtils = window.TraceUtils || {};
+  const formatMs = typeof traceUtils.formatMs === 'function'
+    ? traceUtils.formatMs
+    : (ms) => (Math.max(0, Number(ms) || 0)).toFixed(2);
+  const formatSeconds = typeof traceUtils.formatSeconds === 'function'
+    ? traceUtils.formatSeconds
+    : (ms) => (Math.max(0, Number(ms) || 0) / 1000).toFixed(2);
 
   // =========================================================
   // DOM
@@ -71,9 +76,23 @@
     hintText: document.getElementById('hintText'),
     toolButtons: Array.from(document.querySelectorAll('.tool-btn')),
 
-    stepsValue: document.getElementById('stepsValue'),
+    currentNodeValue: document.getElementById('currentNodeValue'),
+    phaseValue: document.getElementById('phaseValue'),
+    gValue: document.getElementById('gValue'),
+    hValue: document.getElementById('hValue'),
+    fValue: document.getElementById('fValue'),
+    openValue: document.getElementById('openValue'),
     exploredValue: document.getElementById('exploredValue'),
+    stepsValue: document.getElementById('stepsValue'),
+    eventValue: document.getElementById('eventValue'),
+    algoMsValue: document.getElementById('algoMsValue'),
     timerValue: document.getElementById('timerValue'),
+
+    predictionInput: document.getElementById('predictionInput'),
+    predictionResult: document.getElementById('predictionResult'),
+    predictionResultText: document.getElementById('predictionResultText'),
+    predictionVerdict: document.getElementById('predictionVerdict'),
+    predictionStats: document.getElementById('predictionStats'),
 
     startBtn: document.getElementById('startBtn'),
     startLabel: document.getElementById('startLabel'),
@@ -84,6 +103,18 @@
     playbackMeta: document.getElementById('playbackMeta'),
     playbackReadout: document.getElementById('playbackReadout'),
     timelineSlider: document.getElementById('timelineSlider'),
+    stepBackBtn: document.getElementById('stepBackBtn'),
+    stepNextBtn: document.getElementById('stepNextBtn'),
+    playPauseBtn: document.getElementById('playPauseBtn'),
+    playPauseLabel: document.getElementById('playPauseLabel'),
+    playIcon: document.getElementById('playIcon'),
+    pauseIcon: document.getElementById('pauseIcon'),
+    speedButtons: Array.from(document.querySelectorAll('.speed-btn')),
+
+    semanticViewBtn: document.getElementById('semanticViewBtn'),
+    rainbowViewBtn: document.getElementById('rainbowViewBtn'),
+    semanticLegend: document.getElementById('semanticLegend'),
+    rainbowLegend: document.getElementById('rainbowLegend'),
 
     resultOverlay: document.getElementById('resultOverlay'),
     resultCard: document.querySelector('.result-card'),
@@ -94,6 +125,8 @@
     resultSteps: document.getElementById('resultSteps'),
     resultExplored: document.getElementById('resultExplored'),
     resultTime: document.getElementById('resultTime'),
+    resultPrediction: document.getElementById('resultPrediction'),
+    resultTimers: document.getElementById('resultTimers'),
     resultClose: document.getElementById('resultClose'),
     resultCloseLabel: document.getElementById('resultCloseLabel'),
 
@@ -103,25 +136,31 @@
   };
 
   // =========================================================
-  // 游戏状态
+  // 状态
   // =========================================================
 
   const state = {
-    walls: createWallGrid(),
+    walls: makeWallGrid(),
     start: { x: 3, y: 10 },
     end: { x: 16, y: 10 },
     tool: 'wall',
+    viewMode: 'semantic',
 
-    phase: 'idle', // idle | exploring | tracing | success | failed | replay
-    result: null,
-    timeline: null,
-    startedAt: 0,
-    elapsed: 0,
-    visibleVisited: 0,
-    visibleSteps: 0,
-    pathProgress: 0,
-    playbackProgress: 0,
+    trace: null,
+    eventIndex: 0,
+    phase: 'idle', // idle | paused | playing | done
+    playing: false,
+    speed: 1,
+    animMs: 0,
+    accMs: 0,
+    lastFrame: 0,
     rafId: 0,
+    viewCache: null,
+    pendingPrediction: null,
+    prediction: null,
+    predictionRecorded: false,
+    completionAnnounced: false,
+    overlayDismissed: false,
 
     hover: null,
     dragMode: null,
@@ -131,8 +170,6 @@
     toastHideTimer: 0,
     toastRemoveTimer: 0,
     domCache: {
-      steps: null,
-      explored: null,
       timer: null
     }
   };
@@ -149,10 +186,16 @@
   function init() {
     bindEvents();
     initAlgorithmDocs();
-    resetPlaybackPanel();
+    updatePredictionStats();
+    resetRunState({ silent: true });
     selectTool('wall', true);
     resizeCanvas();
-    updateStats(0, 0, 0);
+    updateControlsState();
+
+    if (!isEngineReady()) {
+      setStatus('failed', '引擎未加载');
+      console.warn('AStarEngine 尚未加载：页面可编辑地图，但无法运行寻路。');
+    }
 
     if ('ResizeObserver' in window) {
       const observer = new ResizeObserver(scheduleResize);
@@ -197,19 +240,45 @@
     dom.clearBtn.addEventListener('click', clearWalls);
 
     dom.timelineSlider.addEventListener('input', onTimelineInput);
+    dom.stepBackBtn.addEventListener('click', () => seekTo(state.eventIndex - 1));
+    dom.stepNextBtn.addEventListener('click', () => seekTo(state.eventIndex + 1));
+    dom.playPauseBtn.addEventListener('click', togglePlayback);
 
-    // 鼠标操作后移除按钮焦点，保证直接按 Enter 仍能开始寻路；
-    // 键盘 Tab 聚焦按钮时则保留焦点，Enter 仍可正常触发按钮本身。
-    [...dom.toolButtons, dom.randomBtn, dom.clearBtn].forEach((button) => {
+    dom.speedButtons.forEach((button) => {
+      button.addEventListener('click', () => setSpeed(Number(button.dataset.speed)));
+    });
+
+    dom.semanticViewBtn.addEventListener('click', () => setViewMode('semantic'));
+    dom.rainbowViewBtn.addEventListener('click', () => setViewMode('rainbow'));
+
+    dom.predictionInput.addEventListener('input', () => {
+      dom.predictionInput.classList.remove('is-invalid');
+    });
+
+    // 鼠标操作后移除按钮焦点，保证直接按 Enter / Space 仍作用于页面。
+    [
+      ...dom.toolButtons,
+      dom.randomBtn,
+      dom.clearBtn,
+      dom.startBtn,
+      ...dom.speedButtons,
+      dom.stepBackBtn,
+      dom.stepNextBtn,
+      dom.playPauseBtn,
+      dom.semanticViewBtn,
+      dom.rainbowViewBtn
+    ].forEach((button) => {
       button.addEventListener('pointerup', () => button.blur());
     });
 
     dom.resultClose.addEventListener('click', () => {
+      state.overlayDismissed = true;
       hideResultOverlay({ moveFocus: true });
     });
 
     dom.resultOverlay.addEventListener('click', (event) => {
       if (event.target === dom.resultOverlay) {
+        state.overlayDismissed = true;
         hideResultOverlay({ moveFocus: true });
       }
     });
@@ -225,586 +294,657 @@
   }
 
   // =========================================================
-  // A* 算法
+  // 引擎调用与搜索入口
   // =========================================================
 
-  /**
-   * 使用 A* 搜索最短路径。
-   * 网格为四邻接，代价恒为 1，启发函数使用曼哈顿距离。
-   * 返回：{ visited, path, found }
-   */
-  function findPath() {
-    const startKey = toKey(state.start.x, state.start.y);
-    const endKey = toKey(state.end.x, state.end.y);
-
-    const open = new MinHeap((a, b) => {
-      if (a.f !== b.f) return a.f - b.f;
-      if (a.h !== b.h) return a.h - b.h;
-      return a.key - b.key;
-    });
-
-    const gScore = new Float64Array(CELL_COUNT);
-    gScore.fill(Infinity);
-
-    const cameFrom = new Int32Array(CELL_COUNT);
-    cameFrom.fill(-1);
-
-    const closed = new Uint8Array(CELL_COUNT);
-    const visited = [];
-
-    const startH = manhattan(state.start.x, state.start.y, state.end.x, state.end.y);
-    gScore[startKey] = 0;
-    open.push({ key: startKey, g: 0, h: startH, f: startH });
-
-    while (open.size > 0) {
-      const current = open.pop();
-
-      // 跳过堆中过期的旧记录
-      if (closed[current.key] || current.g !== gScore[current.key]) {
-        continue;
-      }
-
-      closed[current.key] = 1;
-      visited.push(current.key);
-
-      if (current.key === endKey) {
-        return {
-          visited,
-          path: buildPath(cameFrom, startKey, endKey),
-          found: true
-        };
-      }
-
-      const x = current.key % GRID_SIZE;
-      const y = Math.floor(current.key / GRID_SIZE);
-
-      for (const [dx, dy] of DIRECTIONS) {
-        const nx = x + dx;
-        const ny = y + dy;
-
-        if (!isInside(nx, ny) || state.walls[ny][nx]) continue;
-
-        const neighborKey = toKey(nx, ny);
-        if (closed[neighborKey]) continue;
-
-        const tentativeG = current.g + 1;
-        if (tentativeG >= gScore[neighborKey]) continue;
-
-        cameFrom[neighborKey] = current.key;
-        gScore[neighborKey] = tentativeG;
-
-        const h = manhattan(nx, ny, state.end.x, state.end.y);
-        open.push({
-          key: neighborKey,
-          g: tentativeG,
-          h,
-          f: tentativeG + h
-        });
-      }
-    }
-
-    return { visited, path: [], found: false };
+  function isEngineReady() {
+    return Boolean(
+      Engine &&
+      typeof Engine.findPathTrace === 'function'
+    );
   }
-
-  function buildPath(cameFrom, startKey, endKey) {
-    const path = [];
-    let current = endKey;
-
-    while (current !== -1) {
-      path.push(current);
-      if (current === startKey) break;
-      current = cameFrom[current];
-    }
-
-    path.reverse();
-    return path[0] === startKey ? path : [];
-  }
-
-  class MinHeap {
-    constructor(compare) {
-      this.items = [];
-      this.compare = compare;
-    }
-
-    get size() {
-      return this.items.length;
-    }
-
-    push(item) {
-      this.items.push(item);
-      this.bubbleUp(this.items.length - 1);
-    }
-
-    pop() {
-      const items = this.items;
-      if (items.length === 0) return null;
-
-      const top = items[0];
-      const last = items.pop();
-
-      if (items.length > 0) {
-        items[0] = last;
-        this.bubbleDown(0);
-      }
-
-      return top;
-    }
-
-    bubbleUp(index) {
-      const items = this.items;
-
-      while (index > 0) {
-        const parent = Math.floor((index - 1) / 2);
-        if (this.compare(items[index], items[parent]) >= 0) break;
-        [items[index], items[parent]] = [items[parent], items[index]];
-        index = parent;
-      }
-    }
-
-    bubbleDown(index) {
-      const items = this.items;
-      const length = items.length;
-
-      while (true) {
-        const left = index * 2 + 1;
-        const right = left + 1;
-        let smallest = index;
-
-        if (left < length && this.compare(items[left], items[smallest]) < 0) {
-          smallest = left;
-        }
-
-        if (right < length && this.compare(items[right], items[smallest]) < 0) {
-          smallest = right;
-        }
-
-        if (smallest === index) break;
-
-        [items[index], items[smallest]] = [items[smallest], items[index]];
-        index = smallest;
-      }
-    }
-  }
-
-  const DIRECTIONS = [
-    [1, 0],
-    [-1, 0],
-    [0, 1],
-    [0, -1]
-  ];
-
-  function manhattan(x1, y1, x2, y2) {
-    return Math.abs(x1 - x2) + Math.abs(y1 - y2);
-  }
-
-  function isInside(x, y) {
-    return x >= 0 && x < GRID_SIZE && y >= 0 && y < GRID_SIZE;
-  }
-
-  function toKey(x, y) {
-    return y * GRID_SIZE + x;
-  }
-
-  function fromKey(key) {
-    return {
-      x: key % GRID_SIZE,
-      y: Math.floor(key / GRID_SIZE)
-    };
-  }
-
-  // =========================================================
-  // 寻路流程与计时
-  // =========================================================
 
   function startSearch() {
-    if (isBusy()) return;
-
-    hideResultOverlay();
     hideToast();
-
+    hideResultOverlay();
+    cancelPlayback();
     state.hover = null;
     state.dragMode = null;
+    state.overlayDismissed = false;
 
-    if (state.rafId) {
-      cancelAnimationFrame(state.rafId);
-      state.rafId = 0;
+    if (!isEngineReady()) {
+      setStatus('failed', '引擎未加载');
+      showToast('寻路引擎未加载，请刷新页面后重试');
+      return;
     }
 
-    const result = findPath();
-    const visitedCount = result.visited.length;
-    const pathMoves = result.found ? Math.max(0, result.path.length - 1) : 0;
+    const prediction = readPredictionInput();
+    if (prediction.invalid) {
+      dom.predictionInput.classList.add('is-invalid');
+      dom.predictionInput.focus({ preventScroll: true });
+      showToast('请输入不小于 -1 的整数；无路可走填 -1');
+      return;
+    }
+    dom.predictionInput.classList.remove('is-invalid');
 
-    const exploreDuration = reduceMotion
-      ? 0
-      : clamp(visitedCount * TIMING.explorePerNode, TIMING.exploreMin, TIMING.exploreMax);
-    const revealDuration = reduceMotion ? 0 : TIMING.reveal;
-    const exploreEnd = exploreDuration + revealDuration;
-    const traceStart = exploreEnd + (reduceMotion ? 0 : TIMING.traceLead);
-    const traceDuration = reduceMotion
-      ? 0
-      : clamp(pathMoves * TIMING.tracePerStep, TIMING.traceMin, TIMING.traceMax);
+    let trace;
+    try {
+      trace = Engine.findPathTrace(state.walls, state.start, state.end);
+    } catch (error) {
+      console.error('A* 引擎运行失败：', error);
+      setStatus('failed', '引擎异常');
+      showToast('寻路引擎运行失败，请重试');
+      return;
+    }
 
-    state.result = result;
-    state.phase = 'exploring';
-    state.timeline = {
-      exploreDuration,
-      revealDuration,
-      exploreEnd,
-      traceStart,
-      traceDuration,
-      finishAt: result.found ? traceStart + traceDuration : exploreEnd + TIMING.failureHold
-    };
-    state.startedAt = performance.now();
-    state.elapsed = 0;
-    state.visibleVisited = 0;
-    state.visibleSteps = 0;
-    state.pathProgress = 0;
+    if (
+      !trace ||
+      !Array.isArray(trace.events) ||
+      trace.events.length === 0 ||
+      !Array.isArray(trace.path)
+    ) {
+      setStatus('failed', '数据异常');
+      showToast('引擎返回的数据不完整，请重试');
+      return;
+    }
 
-    preparePlaybackForSearch();
-    setBusy(true);
-    setStatus('exploring', 'A* 探索中…');
-    updateStats(0, 0, 0);
-    draw();
+    state.trace = trace;
+    state.eventIndex = 0;
+    state.animMs = 0;
+    state.accMs = 0;
+    state.phase = 'paused';
+    state.playing = false;
+    state.viewCache = null;
+    state.pendingPrediction = prediction.value;
+    state.prediction = null;
+    state.predictionRecorded = false;
+    state.completionAnnounced = false;
+    dom.predictionResult.hidden = true;
+    dom.predictionVerdict.className = 'prediction-verdict is-neutral';
 
-    announce('A* 开始寻路。');
+    dom.timelineSlider.max = String(trace.events.length - 1);
+    syncEventView(0);
+    setStatus('exploring', 'A* 事件回放中');
+    dom.playbackMeta.textContent = '搜索已完成 · 按空格播放，或按事件单步';
+    announce(`搜索完成，共 ${trace.events.length} 个事件。可以播放或单步查看。`);
 
-    state.rafId = requestAnimationFrame(animationLoop);
+    if (reduceMotion || trace.events.length === 1) {
+      seekTo(trace.events.length - 1, { skipPause: true });
+    } else {
+      startPlayback();
+    }
   }
 
-  function animationLoop(timestamp) {
-    if (!isBusy() || !state.result) {
+  // =========================================================
+  // 事件索引、播放与单步
+  // =========================================================
+
+  function syncEventView(index) {
+    if (!state.trace) return;
+
+    const last = state.trace.events.length - 1;
+    const next = clamp(Math.round(index), 0, last);
+
+    state.eventIndex = next;
+    renderEvent();
+    updateControlsState();
+  }
+
+  function renderEvent() {
+    if (!state.trace) {
+      resetStatePanel();
+      draw();
+      return;
+    }
+
+    const view = buildEventView(state.eventIndex);
+    const metrics = state.trace.metrics || {};
+
+    setText(dom.currentNodeValue, view.current ? `(${view.current.x}, ${view.current.y})` : '—');
+    setText(dom.phaseValue, phaseText(view.event));
+    setText(dom.gValue, view.current ? view.current.g : 0);
+    setText(dom.hValue, view.current ? view.current.h : 0);
+    setText(dom.fValue, view.current ? view.current.f : 0);
+    setText(dom.openValue, view.openSize);
+    setText(dom.exploredValue, view.closedCount);
+    setText(dom.stepsValue, view.pathStep);
+    setText(dom.eventValue, `${view.index + 1}/${view.eventsCount}`);
+    setText(dom.algoMsValue, formatMs(metrics.computeMs));
+    setText(dom.timerValue, formatSeconds(state.animMs));
+
+    dom.playbackReadout.textContent = `${view.index + 1}/${view.eventsCount} · ${shortPhaseText(view.event)}`;
+    dom.timelineSlider.setAttribute(
+      'aria-valuetext',
+      `事件 ${view.index + 1} / ${view.eventsCount}，${phaseText(view.event)}，当前节点 ${view.current ? `(${view.current.x}, ${view.current.y})` : '无'}`
+    );
+
+    const last = view.eventsCount - 1;
+    const progress = last > 0 ? view.index / last : 0;
+    dom.playbackPanel.style.setProperty('--progress', `${(progress * 100).toFixed(2)}%`);
+
+    const sliderValue = String(view.index);
+    if (dom.timelineSlider.value !== sliderValue) {
+      dom.timelineSlider.value = sliderValue;
+    }
+
+    draw();
+  }
+
+  function startPlayback() {
+    if (!state.trace || state.playing) return;
+
+    const last = state.trace.events.length - 1;
+    if (last <= 0) return;
+
+    if (state.eventIndex >= last) {
+      state.eventIndex = 0;
+      state.animMs = 0;
+      state.accMs = 0;
+      state.overlayDismissed = false;
+      state.completionAnnounced = false;
+      hideResultOverlay();
+      syncEventView(0);
+    }
+
+    state.playing = true;
+    state.phase = 'playing';
+    state.accMs = 0;
+    state.lastFrame = performance.now();
+    setStatus('exploring', 'A* 事件回放中');
+    dom.playbackMeta.textContent = '播放中 · 每个事件前进一格';
+    updateControlsState();
+    renderEvent();
+    state.rafId = requestAnimationFrame(playbackTick);
+  }
+
+  function playbackTick(timestamp) {
+    if (!state.playing || !state.trace) {
       state.rafId = 0;
       return;
     }
 
-    const elapsed = Math.max(0, timestamp - state.startedAt);
-    const timeline = state.timeline;
-    state.elapsed = elapsed;
+    const stepMs = getEventStepMs();
+    const dt = Math.min(220, Math.max(0, timestamp - state.lastFrame));
+    state.lastFrame = timestamp;
+    state.animMs += dt;
+    state.accMs += dt * state.speed;
 
-    if (state.phase === 'exploring') {
-      if (elapsed < timeline.exploreEnd) {
-        state.visibleVisited = getVisibleVisitCount(elapsed);
-      } else {
-        state.visibleVisited = state.result.visited.length;
-      }
+    const last = state.trace.events.length - 1;
+    let nextIndex = state.eventIndex;
 
-      updateStats(0, state.visibleVisited, elapsed);
-
-      if (elapsed >= timeline.exploreEnd) {
-        if (state.result.found) {
-          state.phase = 'tracing';
-          setStatus('exploring', '回溯最短路径…');
-        } else if (elapsed >= timeline.finishAt) {
-          finishSearch(false, timeline.finishAt);
-          return;
-        }
-      }
+    while (nextIndex < last && state.accMs >= stepMs) {
+      state.accMs -= stepMs;
+      nextIndex += 1;
     }
 
-    if (state.phase === 'tracing') {
-      const pathMoves = Math.max(0, state.result.path.length - 1);
+    if (nextIndex !== state.eventIndex) {
+      state.eventIndex = nextIndex;
+      renderEvent();
+      updateControlsState();
 
-      if (timeline.traceDuration <= 0) {
-        state.pathProgress = 1;
-      } else {
-        state.pathProgress = clamp(
-          (elapsed - timeline.traceStart) / timeline.traceDuration,
-          0,
-          1
-        );
-      }
-
-      state.visibleSteps = Math.min(
-        pathMoves,
-        Math.floor(state.pathProgress * pathMoves + 0.0001)
-      );
-
-      updateStats(state.visibleSteps, state.visibleVisited, elapsed);
-
-      if (elapsed >= timeline.finishAt) {
-        finishSearch(true, timeline.finishAt);
+      if (nextIndex >= last) {
+        finishTrace();
         return;
       }
     }
 
-    updatePlaybackDuringSearch(elapsed);
-    draw(timestamp);
-    state.rafId = requestAnimationFrame(animationLoop);
+    updateAnimationDisplay();
+    state.rafId = requestAnimationFrame(playbackTick);
   }
 
-  function getVisibleVisitCount(elapsed) {
-    const count = state.result ? state.result.visited.length : 0;
-    const duration = state.timeline ? state.timeline.exploreDuration : 0;
+  function togglePlayback() {
+    if (!state.trace) return;
 
-    if (count <= 1 || duration <= 0) return count;
-
-    const progress = clamp(elapsed / duration, 0, 1);
-    return Math.min(count, Math.floor(progress * (count - 1)) + 1);
-  }
-
-  function finishSearch(found, finalElapsed) {
-    state.rafId = 0;
-    state.elapsed = finalElapsed;
-
-    const visitedCount = state.result ? state.result.visited.length : 0;
-    const pathMoves = found ? Math.max(0, state.result.path.length - 1) : 0;
-
-    state.visibleVisited = visitedCount;
-    state.visibleSteps = pathMoves;
-    state.pathProgress = found ? 1 : 0;
-
-    setBusy(false);
-    updateStats(pathMoves, visitedCount, finalElapsed);
-    draw();
-    completePlaybackPanel(found);
-
-    if (found) {
-      state.phase = 'success';
-      setStatus('success', '已到达终点');
-      showResultOverlay(true);
-      announce(
-        `寻路成功！共 ${pathMoves} 步，探索 ${visitedCount} 个节点，用时 ${formatSeconds(finalElapsed)} 秒。`
-      );
+    if (state.playing) {
+      pausePlayback();
     } else {
-      state.phase = 'failed';
-      setStatus('failed', '无法抵达');
-      showResultOverlay(false);
-      announce(`没有找到可行路径，共探索 ${visitedCount} 个节点。请调整障碍物后再试。`);
+      startPlayback();
     }
   }
 
-  function isBusy() {
-    return state.phase === 'exploring' || state.phase === 'tracing';
-  }
+  function pausePlayback({ silent = false } = {}) {
+    if (!state.playing) return;
 
-  function setBusy(busy) {
-    dom.toolButtons.forEach((button) => {
-      button.disabled = busy;
-    });
-    dom.startBtn.disabled = busy;
-    dom.randomBtn.disabled = busy;
-    dom.clearBtn.disabled = busy;
-    dom.startLabel.textContent = busy ? '正在寻路…' : '开始寻路';
-    canvasWrap.classList.toggle('is-running', busy);
-  }
-
-  function setStatus(visualState, text) {
-    if (dom.statusPill.dataset.state !== visualState) {
-      dom.statusPill.dataset.state = visualState;
+    state.playing = false;
+    if (state.rafId) {
+      cancelAnimationFrame(state.rafId);
+      state.rafId = 0;
     }
-    if (dom.statusText.textContent !== text) {
-      dom.statusText.textContent = text;
+    state.phase = 'paused';
+    updateControlsState();
+
+    if (!silent) {
+      setStatus('replay', '回放已暂停');
+      dom.playbackMeta.textContent = '已暂停 · 可单步或拖动滑块';
     }
   }
 
-  function updateStats(steps, explored, elapsed) {
-    if (state.domCache.steps !== steps) {
-      dom.stepsValue.textContent = String(steps);
-      state.domCache.steps = steps;
-    }
-
-    if (state.domCache.explored !== explored) {
-      dom.exploredValue.textContent = String(explored);
-      state.domCache.explored = explored;
-    }
-
-    const timeText = formatSeconds(elapsed);
-    if (state.domCache.timer !== timeText) {
-      dom.timerValue.textContent = timeText;
-      state.domCache.timer = timeText;
+  function cancelPlayback() {
+    state.playing = false;
+    state.phase = state.phase === 'done' ? 'done' : 'idle';
+    if (state.rafId) {
+      cancelAnimationFrame(state.rafId);
+      state.rafId = 0;
     }
   }
 
-  // =========================================================
-  // 寻路过程回放
-  // =========================================================
+  function seekTo(index, { skipPause = false } = {}) {
+    if (!state.trace) return;
+    if (!skipPause) pausePlayback({ silent: true });
 
-  function preparePlaybackForSearch() {
-    dom.timelineSlider.disabled = true;
-    dom.playbackPanel.dataset.state = 'running';
-    dom.playbackMeta.textContent = 'A* 正在生成探索顺序…';
-    setPlaybackProgress(0);
-    updatePlaybackReadout(0, 0);
-    dom.timelineSlider.setAttribute('aria-valuetext', '寻路进行中');
-  }
+    const last = state.trace.events.length - 1;
+    const next = clamp(Math.round(index), 0, last);
 
-  function updatePlaybackDuringSearch(elapsed) {
-    const timeline = state.timeline;
-    if (!timeline || !state.result) return;
-
-    const progress = timeline.finishAt > 0 ? clamp(elapsed / timeline.finishAt, 0, 1) : 0;
-    setPlaybackProgress(progress);
-    updatePlaybackReadout(state.visibleVisited, state.visibleSteps);
-
-    let meta = 'A* 正在扩展节点…';
-    if (state.result.found && elapsed >= timeline.traceStart) {
-      meta = 'A* 正在回溯最短路径…';
-    } else if (!state.result.found && elapsed >= timeline.exploreEnd) {
-      meta = 'A* 正在确认起点与终点的连通性…';
+    if (next < last) {
+      state.overlayDismissed = false;
+      hideResultOverlay();
+      state.phase = 'paused';
+      setStatus('replay', '回放中 · 单步验证');
+      dom.playbackMeta.textContent = '已暂停 · 可单步或拖动滑块';
+      state.completionAnnounced = false;
     }
 
-    if (dom.playbackMeta.textContent !== meta) {
-      dom.playbackMeta.textContent = meta;
+    syncEventView(next);
+
+    if (next >= last) {
+      finishTrace();
+    } else {
+      updateControlsState();
     }
-  }
-
-  function completePlaybackPanel(found) {
-    const visitedCount = state.result ? state.result.visited.length : 0;
-    const pathMoves = found ? Math.max(0, state.result.path.length - 1) : 0;
-
-    dom.timelineSlider.disabled = false;
-    dom.playbackPanel.dataset.state = 'ready';
-    setPlaybackProgress(1);
-    updatePlaybackReadout(visitedCount, pathMoves);
-    dom.playbackMeta.textContent = found
-      ? '拖动滑块，回看探索与路径回溯'
-      : '拖动滑块，回看完整的探索过程';
-  }
-
-  function resetPlaybackPanel() {
-    dom.timelineSlider.disabled = true;
-    dom.playbackPanel.dataset.state = 'empty';
-    setPlaybackProgress(0);
-    dom.playbackMeta.textContent = '完成一次寻路后，可拖动进度查看';
-    dom.playbackReadout.textContent = '等待寻路';
-    dom.timelineSlider.setAttribute('aria-valuetext', '尚未开始寻路');
-  }
-
-  function setPlaybackProgress(progress) {
-    const normalized = clamp(progress, 0, 1);
-    state.playbackProgress = normalized;
-
-    dom.playbackPanel.style.setProperty(
-      '--progress',
-      `${(normalized * 100).toFixed(2)}%`
-    );
-
-    const sliderValue = String(Math.round(normalized * 1000));
-    if (dom.timelineSlider.value !== sliderValue) {
-      dom.timelineSlider.value = sliderValue;
-    }
-  }
-
-  function updatePlaybackReadout(explored, steps) {
-    if (!state.result) {
-      dom.playbackReadout.textContent = '等待寻路';
-      return;
-    }
-
-    const visitedTotal = state.result.visited.length;
-    const stepsTotal = state.result.found
-      ? Math.max(0, state.result.path.length - 1)
-      : 0;
-
-    dom.playbackReadout.textContent =
-      `探索 ${explored}/${visitedTotal} · 步数 ${steps}/${stepsTotal}`;
-
-    dom.timelineSlider.setAttribute(
-      'aria-valuetext',
-      `已探索 ${explored}/${visitedTotal} 个节点，路径已显示 ${steps}/${stepsTotal} 步`
-    );
   }
 
   function onTimelineInput() {
-    if (!state.result || !state.timeline || isBusy()) return;
-
-    hideResultOverlay();
-    state.hover = null;
-
-    const fraction = clamp(Number(dom.timelineSlider.value) / 1000, 0, 1);
-    const elapsed = fraction * state.timeline.finishAt;
-    const totalSteps = state.result.found
-      ? Math.max(0, state.result.path.length - 1)
-      : 0;
-
-    state.phase = 'replay';
-    state.elapsed = elapsed;
-    state.visibleVisited = getVisibleVisitCount(elapsed);
-    state.pathProgress = getPathProgressAt(elapsed);
-    state.visibleSteps = Math.min(
-      totalSteps,
-      Math.floor(state.pathProgress * totalSteps + 0.0001)
-    );
-
-    updateStats(state.visibleSteps, state.visibleVisited, elapsed);
-    setPlaybackProgress(fraction);
-    updatePlaybackReadout(state.visibleVisited, state.visibleSteps);
-
-    const atEnd = fraction >= 0.9995;
-
-    if (atEnd) {
-      dom.playbackPanel.dataset.state = 'ready';
-      dom.playbackMeta.textContent = state.result.found
-        ? '已到达终点，可拖回起点重看'
-        : '搜索结束，未找到连通路径';
-    } else {
-      dom.playbackPanel.dataset.state = 'replaying';
-      dom.playbackMeta.textContent =
-        state.result.found && elapsed >= state.timeline.traceStart
-          ? '回放中 · 路径回溯'
-          : '回放中 · 节点扩展';
-    }
-
-    updateReplayStatus(atEnd);
-    draw();
+    if (!state.trace) return;
+    seekTo(Number(dom.timelineSlider.value));
   }
 
-  function updateReplayStatus(atEnd) {
-    if (atEnd) {
-      if (state.result.found) {
-        setStatus('success', '已到达终点');
-      } else {
-        setStatus('failed', '无法抵达');
+  function setSpeed(speed) {
+    if (![1, 2, 4].includes(speed)) return;
+    state.speed = speed;
+    updateSpeedButtons();
+  }
+
+  function finishTrace() {
+    if (!state.trace) return;
+
+    const last = state.trace.events.length - 1;
+    state.eventIndex = last;
+    state.playing = false;
+    if (state.rafId) {
+      cancelAnimationFrame(state.rafId);
+      state.rafId = 0;
+    }
+    state.phase = 'done';
+    state.animMs = Math.max(0, state.animMs);
+
+    renderEvent();
+    evaluatePrediction();
+    updateControlsState();
+
+    const found = Boolean(state.trace.found);
+    setStatus(found ? 'success' : 'failed', found ? '已到达终点' : '无法抵达');
+    dom.playbackMeta.textContent = found
+      ? '回放结束 · 可拖动滑块重看'
+      : '回放结束 · 没有连通路径';
+
+    if (!state.overlayDismissed && !state.overlayOpen) {
+      showResultOverlay(found);
+    }
+
+    if (!state.completionAnnounced) {
+      state.completionAnnounced = true;
+      const metrics = state.trace.metrics || {};
+      announce(
+        found
+          ? `寻路成功！共 ${getActualMoves()} 步，探索 ${Number(metrics.expanded) || 0} 个节点。`
+          : `没有找到可行路径，共探索 ${Number(metrics.expanded) || 0} 个节点。`
+      );
+    }
+  }
+
+  function getEventStepMs() {
+    if (!state.trace) return PLAYBACK.maxStepMs;
+    const steps = Math.max(1, state.trace.events.length - 1);
+    return clamp(PLAYBACK.targetMs / steps, PLAYBACK.minStepMs, PLAYBACK.maxStepMs);
+  }
+
+  function updateAnimationDisplay() {
+    const text = formatSeconds(state.animMs);
+    if (state.domCache.timer !== text) {
+      dom.timerValue.textContent = text;
+      state.domCache.timer = text;
+    }
+  }
+
+  function updateControlsState() {
+    const hasTrace = Boolean(state.trace && state.trace.events.length);
+    const last = hasTrace ? state.trace.events.length - 1 : 0;
+    const atEnd = hasTrace && state.eventIndex >= last;
+
+    dom.timelineSlider.disabled = !hasTrace || last === 0;
+    dom.stepBackBtn.disabled = !hasTrace || state.eventIndex <= 0;
+    dom.stepNextBtn.disabled = !hasTrace || atEnd;
+    dom.playPauseBtn.disabled = !hasTrace || last === 0;
+
+    dom.playIcon.hidden = state.playing;
+    dom.pauseIcon.hidden = !state.playing;
+
+    if (state.playing) {
+      dom.playPauseLabel.textContent = '暂停';
+    } else if (!hasTrace) {
+      dom.playPauseLabel.textContent = '播放';
+    } else if (atEnd) {
+      dom.playPauseLabel.textContent = '重播';
+    } else if (state.eventIndex > 0) {
+      dom.playPauseLabel.textContent = '继续';
+    } else {
+      dom.playPauseLabel.textContent = '播放';
+    }
+
+    dom.playbackPanel.dataset.state = hasTrace
+      ? state.playing ? 'replaying' : 'ready'
+      : 'empty';
+
+    updateSpeedButtons();
+  }
+
+  function updateSpeedButtons() {
+    dom.speedButtons.forEach((button) => {
+      const active = Number(button.dataset.speed) === state.speed;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-pressed', String(active));
+      button.disabled = !state.trace;
+    });
+  }
+
+  function buildEventView(index) {
+    const trace = state.trace;
+    const last = trace.events.length - 1;
+    const target = clamp(Math.round(index), 0, last);
+
+    if (state.viewCache && state.viewCache.trace === trace && state.viewCache.index === target) {
+      return state.viewCache.view;
+    }
+
+    const closed = [];
+    const closedSet = new Set();
+    let current = null;
+    let pathStep = 0;
+    let doneFound = null;
+
+    for (let i = 0; i <= target; i += 1) {
+      const event = trace.events[i];
+
+      if (event.type === 'expand') {
+        closed.push(event.key);
+        closedSet.add(event.key);
+        current = event;
+      } else if (event.type === 'path') {
+        if (Number.isFinite(event.step)) {
+          pathStep = Math.max(pathStep, event.step);
+        }
+      } else if (event.type === 'done') {
+        doneFound = Boolean(event.found);
       }
+    }
+
+    const metrics = trace.metrics || {};
+    const totalVisited = trace.visited && trace.visited.length ? trace.visited.length : closed.length;
+    const actualMoves = trace.found
+      ? Math.max(0, Number(metrics.pathMoves) || Math.max(0, trace.path.length - 1))
+      : -1;
+
+    if (doneFound === true) {
+      pathStep = actualMoves;
+    }
+
+    const view = {
+      index: target,
+      event: trace.events[target],
+      eventsCount: trace.events.length,
+      closed,
+      closedSet,
+      current,
+      openTop: current && Array.isArray(current.openTop) ? current.openTop : [],
+      openSize: current ? Math.max(0, Number(current.openSize) || 0) : 0,
+      closedCount: current
+        ? Math.max(0, Number.isFinite(current.closedCount) ? current.closedCount : closed.length)
+        : closed.length,
+      pathStep,
+      totalVisited,
+      actualMoves,
+      doneFound
+    };
+
+    state.viewCache = { trace, index: target, view };
+    return view;
+  }
+
+  function phaseText(event) {
+    if (!event) return '等待开始';
+    if (event.type === 'expand') {
+      return event.phase === 'goal' ? '目标节点弹出' : '扩展当前节点';
+    }
+    if (event.type === 'path') {
+      return `回溯路径第 ${event.step} 步`;
+    }
+    if (event.type === 'done') {
+      return event.found ? '搜索完成 · 已找到路径' : '搜索完成 · 无可行路径';
+    }
+    return '回放中';
+  }
+
+  function shortPhaseText(event) {
+    if (!event) return '等待';
+    if (event.type === 'expand') {
+      return event.phase === 'goal' ? '目标' : '扩展';
+    }
+    if (event.type === 'path') return '回溯';
+    if (event.type === 'done') return event.found ? '完成' : '无路';
+    return '回放';
+  }
+
+  // =========================================================
+  // 预测
+  // =========================================================
+
+  function readPredictionInput() {
+    const raw = dom.predictionInput.value.trim();
+    if (raw === '') return { value: null, invalid: false };
+
+    const value = Number(raw);
+    if (!Number.isInteger(value) || value < -1) {
+      return { value: null, invalid: true };
+    }
+
+    return { value, invalid: false };
+  }
+
+  function getActualMoves() {
+    if (!state.trace) return -1;
+    if (!state.trace.found) return -1;
+    const metrics = state.trace.metrics || {};
+    return Math.max(0, Number(metrics.pathMoves) || Math.max(0, state.trace.path.length - 1));
+  }
+
+  function evaluatePrediction() {
+    if (!state.trace || state.prediction) return;
+
+    const actual = getActualMoves();
+    const guess = state.pendingPrediction;
+    const actualText = formatActual(actual);
+
+    if (guess === null) {
+      state.prediction = { guess: null, actual, ok: null };
+      dom.predictionResult.hidden = false;
+      dom.predictionResultText.textContent = `未做预测 / 实际 ${actualText}`;
+      dom.predictionVerdict.textContent = '—';
+      dom.predictionVerdict.className = 'prediction-verdict is-neutral';
+    } else {
+      const ok = guess === actual;
+      state.prediction = { guess, actual, ok };
+      state.predictionRecorded = true;
+
+      let record = null;
+      try {
+        if (window.ProgressStore && typeof window.ProgressStore.recordPrediction === 'function') {
+          record = window.ProgressStore.recordPrediction('astar', ok);
+        }
+      } catch (error) {
+        console.warn('预测记录写入失败：', error);
+      }
+
+      dom.predictionResult.hidden = false;
+      dom.predictionResultText.textContent = `预测 ${guess} / 实际 ${actualText}`;
+      dom.predictionVerdict.textContent = ok ? '✓ 预测正确' : '✗ 预测错误';
+      dom.predictionVerdict.className = `prediction-verdict ${ok ? 'is-correct' : 'is-wrong'}`;
+      updatePredictionStats(record);
+    }
+
+    updateResultPrediction();
+  }
+
+  function updatePredictionStats(record) {
+    let stats = record;
+
+    if (!stats && window.ProgressStore && typeof window.ProgressStore.get === 'function') {
+      try {
+        stats = window.ProgressStore.get('astar');
+      } catch (error) {
+        stats = null;
+      }
+    }
+
+    const predictions = stats && stats.predictions ? stats.predictions : null;
+    const attempts = predictions ? Number(predictions.attempts) || 0 : 0;
+
+    if (attempts <= 0) {
+      dom.predictionStats.textContent = '历史预测正确率 —';
       return;
     }
 
-    if (state.result.found && state.elapsed >= state.timeline.traceStart) {
-      setStatus('replay', '回放中 · 回溯路径');
+    const correct = Number(predictions.correct) || 0;
+    const accuracy = Math.round((correct / attempts) * 1000) / 10;
+    dom.predictionStats.textContent = `历史预测正确率 ${accuracy}% · ${correct}/${attempts}`;
+  }
+
+  function updateResultPrediction() {
+    if (!state.prediction) {
+      dom.resultPrediction.hidden = true;
+      return;
+    }
+
+    const { guess, actual, ok } = state.prediction;
+    const actualText = formatActual(actual);
+
+    dom.resultPrediction.hidden = false;
+    dom.resultPrediction.className = 'result-prediction';
+
+    if (guess === null) {
+      dom.resultPrediction.textContent = `未做预测 · 实际 ${actualText}`;
+      dom.resultPrediction.classList.add('is-neutral');
     } else {
-      setStatus('replay', '回放中 · 探索节点');
+      dom.resultPrediction.textContent =
+        `预测 ${guess} / 实际 ${actualText} · ${ok ? '预测正确' : '预测错误'}`;
+      dom.resultPrediction.classList.add(ok ? 'is-correct' : 'is-wrong');
     }
   }
 
-  function getPathProgressAt(elapsed) {
-    if (!state.result || !state.result.found || !state.timeline) return 0;
-
-    const timeline = state.timeline;
-    if (elapsed < timeline.traceStart) return 0;
-    if (timeline.traceDuration <= 0) return 1;
-
-    return clamp((elapsed - timeline.traceStart) / timeline.traceDuration, 0, 1);
+  function formatActual(actual) {
+    return actual === -1 ? '无路' : `${actual}`;
   }
 
   // =========================================================
   // 重置单局状态
   // =========================================================
 
-  function resetRunState() {
-    if (state.rafId) {
-      cancelAnimationFrame(state.rafId);
-      state.rafId = 0;
+  function resetRunState({ silent = false, clearPredictionInput = false } = {}) {
+    cancelPlayback();
+    state.phase = 'idle';
+    state.trace = null;
+    state.eventIndex = 0;
+    state.animMs = 0;
+    state.accMs = 0;
+    state.viewCache = null;
+    state.pendingPrediction = null;
+    state.prediction = null;
+    state.predictionRecorded = false;
+    state.completionAnnounced = false;
+    state.overlayDismissed = false;
+    state.overlayOpen = false;
+
+    if (clearPredictionInput) {
+      dom.predictionInput.value = '';
+      dom.predictionInput.classList.remove('is-invalid');
     }
 
-    state.phase = 'idle';
-    state.result = null;
-    state.timeline = null;
-    state.startedAt = 0;
-    state.elapsed = 0;
-    state.visibleVisited = 0;
-    state.visibleSteps = 0;
-    state.pathProgress = 0;
+    dom.predictionResult.hidden = true;
+    dom.predictionVerdict.className = 'prediction-verdict is-neutral';
 
     hideResultOverlay();
     resetPlaybackPanel();
-    setBusy(false);
-    setStatus('idle', '准备就绪');
-    updateStats(0, 0, 0);
-    draw();
+    resetStatePanel();
+    updateControlsState();
+
+    if (!silent) {
+      setStatus('idle', '准备就绪');
+      draw();
+    }
   }
 
-  function formatSeconds(milliseconds) {
-    return (Math.max(0, milliseconds) / 1000).toFixed(2);
+  function resetPlaybackPanel() {
+    dom.timelineSlider.disabled = true;
+    dom.timelineSlider.max = '0';
+    dom.timelineSlider.value = '0';
+    dom.timelineSlider.setAttribute('aria-valuetext', '尚未开始寻路');
+    dom.playbackPanel.dataset.state = 'empty';
+    dom.playbackPanel.style.setProperty('--progress', '0%');
+    dom.playbackMeta.textContent = '完成一次寻路后，按事件单步验证';
+    dom.playbackReadout.textContent = '等待寻路';
+    dom.playIcon.hidden = false;
+    dom.pauseIcon.hidden = true;
+    dom.playPauseLabel.textContent = '播放';
+  }
+
+  function resetStatePanel() {
+    setText(dom.currentNodeValue, '—');
+    setText(dom.phaseValue, '等待开始');
+    setText(dom.gValue, 0);
+    setText(dom.hValue, 0);
+    setText(dom.fValue, 0);
+    setText(dom.openValue, 0);
+    setText(dom.exploredValue, 0);
+    setText(dom.stepsValue, 0);
+    setText(dom.eventValue, '0/0');
+    setText(dom.algoMsValue, '0.00');
+    setText(dom.timerValue, '0.00');
+    state.domCache.timer = '0.00';
+  }
+
+  function setText(element, value) {
+    const text = String(value);
+    if (element && element.textContent !== text) {
+      element.textContent = text;
+    }
+  }
+
+  // =========================================================
+  // 视图模式
+  // =========================================================
+
+  function setViewMode(mode, { silent = false } = {}) {
+    state.viewMode = mode === 'rainbow' ? 'rainbow' : 'semantic';
+
+    const semantic = state.viewMode === 'semantic';
+    dom.semanticViewBtn.classList.toggle('is-active', semantic);
+    dom.rainbowViewBtn.classList.toggle('is-active', !semantic);
+    dom.semanticViewBtn.setAttribute('aria-pressed', String(semantic));
+    dom.rainbowViewBtn.setAttribute('aria-pressed', String(!semantic));
+    dom.semanticLegend.hidden = !semantic;
+    dom.rainbowLegend.hidden = semantic;
+    dom.playbackPanel.dataset.view = state.viewMode;
+
+    if (!silent) draw();
   }
 
   // =========================================================
@@ -812,11 +952,15 @@
   // =========================================================
 
   function showResultOverlay(success) {
-    const visitedCount = state.result ? state.result.visited.length : 0;
-    const pathMoves = success ? Math.max(0, state.result.path.length - 1) : 0;
-    const timeText = formatSeconds(state.elapsed);
+    if (!state.trace) return;
+
+    const metrics = state.trace.metrics || {};
+    const pathMoves = success ? getActualMoves() : 0;
+    const expanded = Number(metrics.expanded)
+      || (state.trace.visited ? state.trace.visited.length : 0);
 
     hideToast();
+    updateResultPrediction();
 
     dom.resultCard.classList.toggle('is-failure', !success);
     dom.resultIcon.classList.toggle('is-failure', !success);
@@ -825,18 +969,23 @@
     dom.resultKicker.textContent = success ? 'ROUTE FOUND' : 'NO ROUTE';
     dom.resultTitle.textContent = success ? '寻路成功！' : '这条路走不通';
     dom.resultMessage.textContent = success
-      ? 'A* 已经找到通往终点的最短路径，点击下方按钮查看完整路线。'
+      ? 'A* 已经找到通往终点的最短路径。拖动事件滑块，可以回看每一次开放集变化。'
       : '起点和终点之间暂时没有连通路线，调整一下障碍物再试一次吧。';
 
     dom.resultSteps.textContent = String(pathMoves);
-    dom.resultExplored.textContent = String(visitedCount);
-    dom.resultTime.textContent = `${timeText}s`;
+    dom.resultExplored.textContent = String(expanded);
+    dom.resultTime.textContent = `${formatMs(metrics.computeMs)} ms`;
+    dom.resultTimers.textContent =
+      `算法 ${formatMs(metrics.computeMs)} ms · 动画 ${formatSeconds(state.animMs)} s`;
     dom.resultCloseLabel.textContent = success ? '继续探索' : '调整地图';
 
     dom.resultOverlay.hidden = false;
     state.overlayOpen = true;
 
-    if (!docsViewer || !docsViewer.isOpen()) {
+    if (
+      (!docsViewer || !docsViewer.isOpen()) &&
+      document.activeElement !== dom.timelineSlider
+    ) {
       requestAnimationFrame(() => {
         dom.resultClose.focus({ preventScroll: true });
       });
@@ -862,7 +1011,6 @@
     dom.toast.hidden = false;
     dom.toast.classList.remove('is-visible');
 
-    // 强制重排后再显示，让连续提示也有入场动画
     void dom.toast.offsetWidth;
     dom.toast.classList.add('is-visible');
 
@@ -895,10 +1043,9 @@
   // =========================================================
 
   function selectTool(tool, silent = false) {
-    if (isBusy() || !TOOL_INFO[tool]) return;
+    if (!TOOL_INFO[tool]) return;
 
     hideResultOverlay();
-
     state.tool = tool;
     canvasWrap.dataset.tool = tool;
 
@@ -916,24 +1063,15 @@
   }
 
   function prepareForEdit() {
-    if (isBusy()) {
-      showToast('A* 正在寻路，请稍候片刻');
-      return false;
+    if (state.trace || state.playing || state.phase !== 'idle') {
+      resetRunState({ clearPredictionInput: true });
+      showToast('地图已修改，本次回放已重置');
     }
-
-    if (state.phase !== 'idle' || state.result || state.overlayOpen) {
-      resetRunState();
-    }
-
     return true;
   }
 
   function onPointerDown(event) {
     if (event.button !== 0 && event.button !== 2) return;
-    if (isBusy()) {
-      showToast('A* 正在寻路，请稍候片刻');
-      return;
-    }
 
     const cell = cellFromEvent(event);
     if (!cell) return;
@@ -978,7 +1116,7 @@
       needsDraw = true;
     }
 
-    if (state.dragMode && cell && !isBusy()) {
+    if (state.dragMode && cell) {
       const key = toKey(cell.x, cell.y);
 
       if (key !== state.lastEditedKey) {
@@ -1083,7 +1221,6 @@
   }
 
   function clearWalls() {
-    if (isBusy()) return;
     hideResultOverlay();
 
     let wallCount = 0;
@@ -1098,100 +1235,54 @@
       return;
     }
 
-    state.walls = createWallGrid();
-    resetRunState();
+    state.walls = makeWallGrid();
+    resetRunState({ clearPredictionInput: true });
     draw();
     showToast('障碍物已清空，重新布置地图吧');
     announce('障碍物已清空。');
   }
 
   function generateRandomMap() {
-    if (isBusy()) return;
-
     hideResultOverlay();
-    const generated = generateRandomWalls();
 
-    state.walls = generated;
-    resetRunState();
-    draw();
-    showToast('随机地图已生成 · 按 Enter 出发');
-    announce('随机地图已生成，按回车键开始寻路。');
-  }
+    if (!Engine || typeof Engine.generateRandomWalls !== 'function') {
+      showToast('寻路引擎未加载，无法生成随机地图');
+      return;
+    }
 
-  function generateRandomWalls() {
-    const wallProbability = 0.24;
+    let generated = null;
 
-    for (let attempt = 0; attempt < 36; attempt += 1) {
-      const candidate = createWallGrid();
-
-      for (let y = 0; y < GRID_SIZE; y += 1) {
-        for (let x = 0; x < GRID_SIZE; x += 1) {
-          if (Math.random() < wallProbability) {
-            candidate[y][x] = true;
-          }
+    try {
+      for (let attempt = 0; attempt < 24; attempt += 1) {
+        generated = Engine.generateRandomWalls(state.start, state.end, 0.24);
+        if (
+          !Engine.hasPath ||
+          typeof Engine.hasPath !== 'function' ||
+          Engine.hasPath(generated, state.start, state.end)
+        ) {
+          break;
         }
       }
-
-      candidate[state.start.y][state.start.x] = false;
-      candidate[state.end.y][state.end.x] = false;
-
-      if (hasPath(candidate, state.start, state.end)) {
-        return candidate;
-      }
+    } catch (error) {
+      console.error('随机地图生成失败：', error);
+      showToast('随机地图生成失败，请重试');
+      return;
     }
 
-    // 极端情况下回退到空地图，确保随机按钮永远可用
-    return createWallGrid();
-  }
-
-  function hasPath(walls, start, end) {
-    const startKey = toKey(start.x, start.y);
-    const endKey = toKey(end.x, end.y);
-
-    const seen = new Uint8Array(CELL_COUNT);
-    const queue = new Int32Array(CELL_COUNT);
-    let head = 0;
-    let tail = 0;
-
-    queue[tail] = startKey;
-    tail += 1;
-    seen[startKey] = 1;
-
-    while (head < tail) {
-      const key = queue[head];
-      head += 1;
-
-      if (key === endKey) return true;
-
-      const x = key % GRID_SIZE;
-      const y = Math.floor(key / GRID_SIZE);
-
-      for (const [dx, dy] of DIRECTIONS) {
-        const nx = x + dx;
-        const ny = y + dy;
-
-        if (!isInside(nx, ny) || walls[ny][nx]) continue;
-
-        const neighborKey = toKey(nx, ny);
-        if (seen[neighborKey]) continue;
-
-        seen[neighborKey] = 1;
-        queue[tail] = neighborKey;
-        tail += 1;
-      }
+    if (!generated) {
+      showToast('随机地图生成失败，请重试');
+      return;
     }
 
-    return false;
-  }
+    // 地图编辑层的不变量：起点和终点永远保持可通行
+    generated[state.start.y][state.start.x] = false;
+    generated[state.end.y][state.end.x] = false;
 
-  function createWallGrid() {
-    return Array.from({ length: GRID_SIZE }, () =>
-      Array.from({ length: GRID_SIZE }, () => false)
-    );
-  }
-
-  function sameCell(a, b) {
-    return Boolean(a && b && a.x === b.x && a.y === b.y);
+    state.walls = generated;
+    resetRunState({ clearPredictionInput: true });
+    draw();
+    showToast('随机地图已生成 · 按 Enter 开始并验证');
+    announce('随机地图已生成，按回车键开始寻路。');
   }
 
   // =========================================================
@@ -1201,45 +1292,72 @@
   function onKeyDown(event) {
     if (event.defaultPrevented || event.isComposing) return;
     if (event.ctrlKey || event.metaKey || event.altKey) return;
+    if (docsViewer && docsViewer.isOpen()) return;
 
     const target = event.target;
-    if (
-      target instanceof HTMLElement &&
-      (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))
-    ) {
-      return;
-    }
+    const isEditable = target instanceof HTMLElement && (
+      target.isContentEditable ||
+      ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)
+    );
 
     if (event.key === 'Enter') {
+      if (target === dom.predictionInput) {
+        event.preventDefault();
+        startSearch();
+        return;
+      }
+
+      if (isEditable) return;
+
       const focusedControl = target instanceof Element
         ? target.closest('button, a[href], [role="button"], [role="tab"]')
         : null;
 
-      // 让键盘聚焦的按钮保留原生 Enter 激活行为
       if (focusedControl) return;
 
       event.preventDefault();
 
       if (state.overlayOpen) {
+        state.overlayDismissed = true;
         hideResultOverlay({ moveFocus: true });
         return;
       }
 
-      if (!isBusy()) {
-        startSearch();
-      }
+      startSearch();
       return;
     }
 
     if (event.key === 'Escape') {
       if (state.overlayOpen) {
         event.preventDefault();
+        state.overlayDismissed = true;
         hideResultOverlay({ moveFocus: true });
       }
       return;
     }
 
-    if (state.overlayOpen || isBusy() || event.repeat) return;
+    if (isEditable) return;
+
+    if (event.repeat) return;
+
+    if (event.key === ' ' || event.code === 'Space') {
+      if (target instanceof Element && target.closest('button, a[href]')) return;
+      if (state.trace && !state.overlayOpen) {
+        event.preventDefault();
+        togglePlayback();
+      }
+      return;
+    }
+
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+      if (target instanceof Element && target.closest('input, button, a[href]')) return;
+      if (!state.trace || state.overlayOpen) return;
+      event.preventDefault();
+      seekTo(state.eventIndex + (event.key === 'ArrowRight' ? 1 : -1));
+      return;
+    }
+
+    if (state.overlayOpen) return;
 
     if (['1', '2', '3', '4'].includes(event.key)) {
       const tools = ['wall', 'start', 'end', 'erase'];
@@ -1285,7 +1403,7 @@
     draw();
   }
 
-  function draw(now = performance.now()) {
+  function draw() {
     const rect = canvas.getBoundingClientRect();
     const width = rect.width;
     const height = rect.height;
@@ -1302,11 +1420,30 @@
       offsetY: (height - boardSize) / 2
     };
 
+    const view = state.trace ? buildEventView(state.eventIndex) : null;
+
     context.clearRect(0, 0, width, height);
     drawBoard(geometry);
-    drawVisitedCells(geometry, now);
+
+    if (view) {
+      if (state.viewMode === 'rainbow') {
+        drawRainbowVisited(geometry, view);
+      } else {
+        drawSemanticVisited(geometry, view);
+      }
+    }
+
     drawWalls(geometry);
-    drawCurrentPath(geometry, now);
+
+    if (view && state.viewMode === 'semantic') {
+      drawOpenSet(geometry, view);
+    }
+
+    if (view) {
+      drawEventPath(geometry, view);
+      drawCurrentNode(geometry, view.current);
+    }
+
     drawHoverCell(geometry);
     drawEndpoints(geometry);
   }
@@ -1353,73 +1490,169 @@
     context.restore();
   }
 
-  function drawVisitedCells(geo, now) {
-    if (!state.result) return;
+  function drawSemanticVisited(geo, view) {
+    if (view.closed.length === 0) return;
 
-    const visited = state.result.visited;
-    const count = visited.length;
-    if (count === 0) return;
+    const total = Math.max(1, view.totalVisited - 1);
 
-    const visibleCount = getVisibleVisitCount(state.elapsed);
-    const exploreDuration = state.timeline ? state.timeline.exploreDuration : 0;
-    const revealDuration = state.timeline ? state.timeline.revealDuration : 0;
-    const exploreEnd = state.timeline ? state.timeline.exploreEnd : 0;
-
-    for (let index = 0; index < visibleCount; index += 1) {
-      const point = fromKey(visited[index]);
-      let revealProgress = 1;
-
-      if (revealDuration > 0) {
-        const revealStart = count <= 1
-          ? 0
-          : (index / (count - 1)) * exploreDuration;
-        revealProgress = clamp((state.elapsed - revealStart) / revealDuration, 0, 1);
-      }
-
-      if (revealProgress <= 0) continue;
-
-      const eased = easeOutCubic(revealProgress);
-      const orderProgress = count <= 1 ? 0 : index / (count - 1);
-      const color = rainbowColor(orderProgress);
+    for (let i = 0; i < view.closed.length; i += 1) {
+      const point = fromKey(view.closed[i]);
+      const progress = view.totalVisited <= 1 ? 0 : i / total;
+      const color = mixColor(SEMANTIC_FROM, SEMANTIC_TO, progress);
+      const alpha = 0.24 + progress * 0.16;
 
       const px = geo.offsetX + point.x * geo.cell;
       const py = geo.offsetY + point.y * geo.cell;
-      const pad = geo.cell * (0.16 - 0.065 * eased);
-      const insetSize = geo.cell - pad * 2;
-      const radius = Math.max(2, geo.cell * (0.14 + 0.07 * eased));
+      const pad = geo.cell * 0.11;
+      const size = geo.cell - pad * 2;
 
       context.save();
-      context.globalAlpha = 0.14 + 0.84 * eased;
-      context.fillStyle = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
-      roundedRectPath(context, px + pad, py + pad, insetSize, insetSize, radius);
+      context.fillStyle = `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${alpha})`;
+      roundedRectPath(context, px + pad, py + pad, size, size, Math.max(2, geo.cell * 0.15));
       context.fill();
       context.restore();
     }
+  }
 
-    // 搜索前沿的高亮边框：让“正在思考”的位置更明显
-    if (state.elapsed < exploreEnd && visibleCount > 0) {
-      const headPoint = fromKey(visited[visibleCount - 1]);
-      const px = geo.offsetX + headPoint.x * geo.cell;
-      const py = geo.offsetY + headPoint.y * geo.cell;
-      const pulse = 0.5 + 0.5 * Math.sin(now / 165);
-      const inset = geo.cell * 0.075;
+  function drawRainbowVisited(geo, view) {
+    if (view.closed.length === 0) return;
+
+    const total = Math.max(1, view.totalVisited - 1);
+
+    for (let i = 0; i < view.closed.length; i += 1) {
+      const point = fromKey(view.closed[i]);
+      const progress = view.totalVisited <= 1 ? 0 : i / total;
+      const color = rainbowColor(progress);
+
+      const px = geo.offsetX + point.x * geo.cell;
+      const py = geo.offsetY + point.y * geo.cell;
+      const pad = geo.cell * 0.1;
+      const size = geo.cell - pad * 2;
 
       context.save();
-      context.lineWidth = Math.max(1.2, geo.cell * 0.045);
-      context.strokeStyle = `rgba(255, 255, 255, ${0.55 + pulse * 0.28})`;
-      context.shadowColor = 'rgba(255, 255, 255, 0.78)';
-      context.shadowBlur = geo.cell * 0.24;
-      roundedRectPath(
-        context,
-        px + inset,
-        py + inset,
-        geo.cell - inset * 2,
-        geo.cell - inset * 2,
-        Math.max(2, geo.cell * 0.2)
-      );
+      context.globalAlpha = 0.92;
+      context.fillStyle = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
+      roundedRectPath(context, px + pad, py + pad, size, size, Math.max(2, geo.cell * 0.16));
+      context.fill();
+      context.restore();
+    }
+  }
+
+  function drawOpenSet(geo, view) {
+    if (!view.openTop || view.openTop.length === 0) return;
+
+    const dash = Math.max(2, geo.cell * 0.13);
+    const gap = Math.max(1.5, geo.cell * 0.09);
+
+    for (let i = 0; i < view.openTop.length; i += 1) {
+      const node = view.openTop[i];
+      if (!node || view.closedSet.has(node.key)) continue;
+
+      const x = Number.isFinite(node.x) ? node.x : fromKey(node.key).x;
+      const y = Number.isFinite(node.y) ? node.y : fromKey(node.key).y;
+
+      if (!isInside(x, y) || state.walls[y][x]) continue;
+
+      const px = geo.offsetX + x * geo.cell;
+      const py = geo.offsetY + y * geo.cell;
+      const pad = geo.cell * (i === 0 ? 0.13 : 0.16);
+      const size = geo.cell - pad * 2;
+      const radius = Math.max(2, geo.cell * 0.16);
+
+      context.save();
+      context.fillStyle = i === 0
+        ? 'rgba(77, 156, 255, 0.12)'
+        : 'rgba(77, 156, 255, 0.06)';
+      roundedRectPath(context, px + pad, py + pad, size, size, radius);
+      context.fill();
+
+      context.setLineDash([dash, gap]);
+      context.lineWidth = Math.max(1.3, geo.cell * (i === 0 ? 0.07 : 0.055));
+      context.strokeStyle = i === 0
+        ? 'rgba(41, 107, 232, 0.92)'
+        : 'rgba(53, 109, 243, 0.55)';
+      roundedRectPath(context, px + pad, py + pad, size, size, radius);
       context.stroke();
       context.restore();
     }
+  }
+
+  function drawCurrentNode(geo, current) {
+    if (!current) return;
+
+    const center = cellCenter(current.key, geo);
+    const inset = Math.max(1.5, geo.cell * 0.055);
+    const radius = Math.max(2.5, geo.cell * 0.2);
+    const px = center.x - geo.cell / 2 + inset;
+    const py = center.y - geo.cell / 2 + inset;
+    const size = geo.cell - inset * 2;
+
+    context.save();
+    roundedRectPath(context, px, py, size, size, radius);
+
+    context.lineWidth = Math.max(3.4, geo.cell * 0.16);
+    context.strokeStyle = 'rgba(255, 255, 255, 0.94)';
+    context.stroke();
+
+    context.shadowColor = 'rgba(17, 94, 89, 0.32)';
+    context.shadowBlur = geo.cell * 0.28;
+    context.lineWidth = Math.max(1.8, geo.cell * 0.075);
+    context.strokeStyle = '#0f766e';
+    context.stroke();
+
+    context.shadowBlur = 0;
+    context.beginPath();
+    context.arc(center.x, center.y, Math.max(1.8, geo.cell * 0.075), 0, Math.PI * 2);
+    context.fillStyle = '#0f766e';
+    context.fill();
+    context.restore();
+  }
+
+  function drawEventPath(geo, view) {
+    const path = state.trace ? state.trace.path : null;
+    if (!path || path.length < 2 || view.pathStep <= 0) return;
+
+    const visibleStep = Math.min(view.pathStep, path.length - 1);
+    if (visibleStep < 1) return;
+
+    const startPoint = cellCenter(path[0], geo);
+
+    context.save();
+    context.lineCap = 'round';
+    context.lineJoin = 'round';
+
+    context.beginPath();
+    context.moveTo(startPoint.x, startPoint.y);
+
+    for (let i = 1; i <= visibleStep; i += 1) {
+      const point = cellCenter(path[i], geo);
+      context.lineTo(point.x, point.y);
+    }
+
+    context.lineWidth = Math.max(5.2, geo.cell * 0.3);
+    context.strokeStyle = 'rgba(255, 255, 255, 0.94)';
+    context.stroke();
+
+    context.lineWidth = Math.max(2.4, geo.cell * 0.11);
+    context.strokeStyle = '#243a5c';
+    context.stroke();
+
+    // 正在回溯时的笔尖
+    if (visibleStep < path.length - 1) {
+      const tip = cellCenter(path[visibleStep], geo);
+
+      context.beginPath();
+      context.arc(tip.x, tip.y, Math.max(3, geo.cell * 0.13), 0, Math.PI * 2);
+      context.fillStyle = '#fff';
+      context.fill();
+
+      context.beginPath();
+      context.arc(tip.x, tip.y, Math.max(1.3, geo.cell * 0.055), 0, Math.PI * 2);
+      context.fillStyle = '#243a5c';
+      context.fill();
+    }
+
+    context.restore();
   }
 
   function drawWalls(geo) {
@@ -1458,86 +1691,8 @@
     }
   }
 
-  function drawCurrentPath(geo, now) {
-    const result = state.result;
-    if (!result || !result.found || result.path.length < 2) return;
-    if (state.pathProgress <= 0) return;
-
-    const path = result.path;
-    const moves = path.length - 1;
-    const revealed = state.pathProgress * moves;
-    const fullSegments = Math.min(moves, Math.floor(revealed));
-
-    const startPoint = cellCenter(path[0], geo);
-
-    context.save();
-    context.lineCap = 'round';
-    context.lineJoin = 'round';
-
-    context.beginPath();
-    context.moveTo(startPoint.x, startPoint.y);
-
-    for (let i = 1; i <= fullSegments; i += 1) {
-      const point = cellCenter(path[i], geo);
-      context.lineTo(point.x, point.y);
-    }
-
-    if (fullSegments < moves) {
-      const segmentProgress = revealed - fullSegments;
-      if (segmentProgress > 0) {
-        const from = cellCenter(path[fullSegments], geo);
-        const to = cellCenter(path[fullSegments + 1], geo);
-        context.lineTo(
-          from.x + (to.x - from.x) * segmentProgress,
-          from.y + (to.y - from.y) * segmentProgress
-        );
-      }
-    }
-
-    // 奶白描边把路线从彩虹底上托起来，深色主线保证任何颜色上都清晰
-    context.lineWidth = Math.max(5.2, geo.cell * 0.3);
-    context.strokeStyle = 'rgba(255, 255, 255, 0.94)';
-    context.stroke();
-
-    context.lineWidth = Math.max(2.4, geo.cell * 0.11);
-    context.strokeStyle = '#243a5c';
-    context.stroke();
-
-    // 随进度流动的细虚线
-    context.setLineDash([
-      Math.max(1.2, geo.cell * 0.035),
-      Math.max(4.5, geo.cell * 0.3)
-    ]);
-    context.lineDashOffset = -(now * 0.035);
-    context.lineWidth = Math.max(1, geo.cell * 0.03);
-    context.strokeStyle = 'rgba(255, 255, 255, 0.62)';
-    context.stroke();
-
-    // 路线正在延伸时的笔尖
-    if (state.pathProgress < 1 && fullSegments < moves) {
-      const segmentProgress = revealed - fullSegments;
-      const from = cellCenter(path[fullSegments], geo);
-      const to = cellCenter(path[fullSegments + 1], geo);
-      const tipX = from.x + (to.x - from.x) * segmentProgress;
-      const tipY = from.y + (to.y - from.y) * segmentProgress;
-
-      context.setLineDash([]);
-      context.beginPath();
-      context.arc(tipX, tipY, Math.max(3, geo.cell * 0.13), 0, Math.PI * 2);
-      context.fillStyle = '#fff';
-      context.fill();
-
-      context.beginPath();
-      context.arc(tipX, tipY, Math.max(1.3, geo.cell * 0.055), 0, Math.PI * 2);
-      context.fillStyle = '#243a5c';
-      context.fill();
-    }
-
-    context.restore();
-  }
-
   function drawHoverCell(geo) {
-    if (!state.hover || isBusy()) return;
+    if (!state.hover) return;
     if (!isInside(state.hover.x, state.hover.y)) return;
 
     const px = geo.offsetX + state.hover.x * geo.cell;
@@ -1676,9 +1831,48 @@
     };
   }
 
+  function setStatus(visualState, text) {
+    if (dom.statusPill.dataset.state !== visualState) {
+      dom.statusPill.dataset.state = visualState;
+    }
+    setText(dom.statusText, text);
+  }
+
   // =========================================================
-  // 通用小工具
+  // 引擎辅助与通用小工具
   // =========================================================
+
+  function makeWallGrid() {
+    if (Engine && typeof Engine.createWallGrid === 'function') {
+      return Engine.createWallGrid();
+    }
+
+    return Array.from({ length: GRID_SIZE }, () =>
+      Array.from({ length: GRID_SIZE }, () => false)
+    );
+  }
+
+  function toKey(x, y) {
+    if (Engine && typeof Engine.toKey === 'function') {
+      return Engine.toKey(x, y);
+    }
+    return y * GRID_SIZE + x;
+  }
+
+  function fromKey(key) {
+    if (Engine && typeof Engine.fromKey === 'function') {
+      return Engine.fromKey(key);
+    }
+    return { x: key % GRID_SIZE, y: Math.floor(key / GRID_SIZE) };
+  }
+
+  function isInside(x, y) {
+    return x >= 0 && x < GRID_SIZE && y >= 0 && y < GRID_SIZE;
+  }
+
+  function sameCell(a, b) {
+    return Boolean(a && b && a.x === b.x && a.y === b.y);
+  }
 
   function roundedRectPath(ctx, x, y, width, height, radius) {
     const r = Math.min(radius, width / 2, height / 2);
@@ -1693,10 +1887,6 @@
 
   function clamp(value, min, max) {
     return Math.min(max, Math.max(min, value));
-  }
-
-  function easeOutCubic(value) {
-    return 1 - Math.pow(1 - value, 3);
   }
 
   function mixColor(from, to, progress) {
