@@ -103,8 +103,8 @@
       order: 1,
       kicker: 'LEVEL 1 · HEURISTIC',
       name: '启发对比',
-      goal: '清空地图，起点 (3, 10)、终点 (16, 10)。用三种算法跑同一张空地图，检查 A* 是否比 BFS 扩展得更少。',
-      meta: '起点 (3,10) → 终点 (16,10) · 空地图',
+      goal: '固定空地图，起点 (3, 10)、终点 (16, 10)。运行 A* / BFS / Dijkstra 对比，验证 A* 扩展节点少于 BFS。',
+      meta: '起点 (3,10) → 终点 (16,10) · 固定空地图',
       quiz: {
         question: '同样一张空地图，为什么 A* 通常比 BFS 扩展更少节点？',
         hint: 'A* 的 f = g + h，曼哈顿启发会优先考虑离终点更近的节点。',
@@ -120,7 +120,7 @@
       order: 2,
       kicker: 'LEVEL 2 · TIE-BREAK',
       name: '平局打破',
-      goal: '载入固定墙体地图，分别用 tieBreak:"h" 与 "key" 运行 A*。检查路径步数相同，但 visited 访问顺序不同。',
+      goal: '固定墙体地图。点击「运行两种平局」，比较 tieBreak:"h" 与 "key" 的路径步数与访问顺序。',
       meta: '起点 (3,3) → 终点 (16,16) · 固定墙体地图',
       start: { x: 3, y: 3 },
       end: { x: 16, y: 16 },
@@ -143,8 +143,8 @@
       order: 3,
       kicker: 'LEVEL 3 · UNREACHABLE',
       name: '无路可达',
-      goal: '封死终点的上下左右四个邻居，同时保持起点区域可达。验证 A* 返回无路，并且 expanded 大于 0。',
-      meta: '起点 (3,10) → 终点 (16,10) · 终点四邻封死',
+      goal: '固定地图已封死终点四邻。开始搜索，验证 A* 返回 found=false 且 expanded > 0。',
+      meta: '起点 (3,10) → 终点 (16,10) · 固定地图 · 终点四邻封死',
       quiz: {
         question: '当终点四邻被封死时，A* 的正确行为是？',
         hint: '堆被清空之前，算法必须确认所有可达节点都扩展完了，才能断言无路。',
@@ -287,14 +287,30 @@
     levelDetailBackdrop: document.getElementById('levelDetailBackdrop'),
     levelDetailClose: document.getElementById('levelDetailClose'),
 
+    playBackLink: document.getElementById('playBackLink'),
+    playBackLabel: document.getElementById('playBackLabel'),
+    playToplineNote: document.getElementById('playToplineNote'),
+    missionBar: document.getElementById('missionBar'),
+    missionEyebrowNote: document.getElementById('missionEyebrowNote'),
+    levelInlineState: document.getElementById('levelInlineState'),
+    levelGoalBadge: document.getElementById('levelGoalBadge'),
+    levelLiveText: document.getElementById('levelLiveText'),
+
     levelTabs: Array.from(document.querySelectorAll('.level-tab')),
     levelKicker: document.getElementById('levelKicker'),
     levelGoal: document.getElementById('levelGoal'),
     levelMeta: document.getElementById('levelMeta'),
+    levelActionBtn: document.getElementById('levelActionBtn'),
     loadLevelBtn: document.getElementById('loadLevelBtn'),
+    levelCta: document.getElementById('levelCta'),
     levelQuizPill: document.getElementById('levelQuizPill'),
     levelFeedback: document.getElementById('levelFeedback'),
     levelMasteryText: document.getElementById('levelMasteryText'),
+    levelQuizLock: document.getElementById('levelQuizLock'),
+    levelQuizBlock: document.getElementById('levelQuizBlock'),
+    quizSolvedNote: document.getElementById('quizSolvedNote'),
+    levelNextCta: document.getElementById('levelNextCta'),
+    levelDrawerFoot: document.getElementById('levelDrawerFoot'),
     quizQuestion: document.getElementById('quizQuestion'),
     quizOptions: document.getElementById('quizOptions'),
     quizSubmitBtn: document.getElementById('quizSubmitBtn'),
@@ -353,6 +369,9 @@
       timer: null
     },
 
+    playMode: 'custom', // level | custom
+    requestedLevel: null,
+    openDocsOnInit: false,
     levelId: 'heuristic',
     levelRuntime: {
       heuristic: createLevelRuntime(),
@@ -382,6 +401,12 @@
   init();
 
   function init() {
+    const playConfig = readPlayConfig();
+    state.playMode = playConfig.mode;
+    state.requestedLevel = playConfig.level;
+    state.openDocsOnInit = playConfig.openDocs;
+    document.body.dataset.playMode = state.playMode;
+
     state.tutorialDone = readWhyTutorialDone();
     bindEvents();
     initWhyTutorial();
@@ -393,6 +418,8 @@
     selectTool('wall', true);
     resizeCanvas();
     updateControlsState();
+    applyPlayMode();
+    openDocsFromQuery();
 
     if (!isEngineReady()) {
       setStatus('failed', '引擎未加载');
@@ -405,6 +432,73 @@
     } else {
       window.addEventListener('resize', scheduleResize);
     }
+  }
+
+  function readPlayConfig() {
+    let params = null;
+    try {
+      params = new URLSearchParams(window.location.search);
+    } catch {
+      params = null;
+    }
+
+    const requested = params ? params.get('level') : null;
+    const validLevel = Boolean(requested && LEVELS[requested]);
+
+    return {
+      mode: validLevel ? 'level' : 'custom',
+      level: validLevel ? requested : null,
+      openDocs: Boolean(params && params.get('docs') === '1')
+    };
+  }
+
+  function applyPlayMode() {
+    const levelMode = state.playMode === 'level';
+    document.body.dataset.playMode = state.playMode;
+    document.body.classList.toggle('is-level-mode', levelMode);
+
+    if (dom.playBackLabel) {
+      dom.playBackLabel.textContent = levelMode ? '关卡选择' : 'A* 算法首页';
+    }
+    if (dom.playToplineNote) {
+      dom.playToplineNote.textContent = levelMode
+        ? '关卡模式 · 固定地图'
+        : '自由探索 · 完整驾驶舱';
+    }
+
+    if (levelMode) {
+      const level = LEVELS[state.levelId];
+      if (dom.missionEyebrowNote && level) {
+        dom.missionEyebrowNote.textContent = `LEVEL ${level.order} / 3`;
+      }
+      document.body.dataset.levelId = state.levelId;
+      loadLevel(state.levelId, { initial: true });
+      lockEditingTools();
+      selectRailTab(state.levelId === 'heuristic' ? 'compare' : 'status');
+      selectLevel(state.levelId);
+    } else {
+      removeLevelQueryHint();
+      if (dom.missionBar) dom.missionBar.hidden = false;
+    }
+  }
+
+  function removeLevelQueryHint() {
+    if (dom.loadLevelBtn) dom.loadLevelBtn.hidden = false;
+    if (dom.levelActionBtn) dom.levelActionBtn.hidden = true;
+    if (dom.levelCta) dom.levelCta.hidden = true;
+    if (dom.levelDetailBtn) dom.levelDetailBtn.hidden = true;
+  }
+
+  function openDocsFromQuery() {
+    if (!state.openDocsOnInit) return;
+
+    requestAnimationFrame(() => {
+      if (docsViewer && typeof docsViewer.open === 'function') {
+        docsViewer.open();
+      } else {
+        showToast('源码数据未加载，暂时无法打开解析');
+      }
+    });
   }
 
   function initAlgorithmDocs() {
@@ -488,7 +582,13 @@
     dom.levelTabs.forEach((button) => {
       button.addEventListener('click', () => selectLevel(button.dataset.level));
     });
-    dom.loadLevelBtn.addEventListener('click', () => loadLevel(state.levelId));
+    if (dom.levelActionBtn) {
+      dom.levelActionBtn.addEventListener('click', runLevelAction);
+    }
+    dom.loadLevelBtn.addEventListener('click', () => {
+      if (state.playMode !== 'level') return;
+      loadLevel(state.levelId);
+    });
     dom.quizOptions.addEventListener('click', onQuizOptionClick);
     dom.quizSubmitBtn.addEventListener('click', submitQuiz);
 
@@ -513,6 +613,7 @@
       dom.levelDetailClose,
       ...dom.levelTabs,
       dom.compareBtn,
+      dom.levelActionBtn,
       dom.loadLevelBtn,
       dom.quizSubmitBtn
     ].forEach((button) => {
@@ -582,8 +683,13 @@
     selectRailTab(tabs[next].dataset.rail, true);
   }
 
-  function openLevelDetails() {
-    if (!dom.levelDetailDrawer || !dom.levelDetailDrawer.hidden) return;
+  function openLevelDetails({ focusQuiz = false } = {}) {
+    if (!dom.levelDetailDrawer || !dom.levelDetailDrawer.hidden) {
+      if (focusQuiz && dom.levelQuizBlock && !dom.levelQuizBlock.hidden) {
+        focusQuizOption();
+      }
+      return;
+    }
 
     dom.levelDetailDrawer.hidden = false;
     dom.levelDetailBackdrop.hidden = false;
@@ -593,10 +699,25 @@
     if (dom.appShell) dom.appShell.inert = true;
     renderLevelFeedback();
     renderLevelProgress();
+    renderQuizGate();
+    renderNextCta();
 
     requestAnimationFrame(() => {
-      dom.levelDetailClose.focus({ preventScroll: true });
+      if (focusQuiz && dom.levelQuizBlock && !dom.levelQuizBlock.hidden) {
+        focusQuizOption();
+      } else {
+        dom.levelDetailClose.focus({ preventScroll: true });
+      }
     });
+  }
+
+  function focusQuizOption() {
+    const firstOption = dom.quizOptions.querySelector('.quiz-option');
+    if (firstOption) {
+      firstOption.focus({ preventScroll: true });
+    } else if (dom.quizSubmitBtn) {
+      dom.quizSubmitBtn.focus({ preventScroll: true });
+    }
   }
 
   function closeLevelDetails({ moveFocus = true } = {}) {
@@ -694,6 +815,8 @@
     } else {
       startPlayback();
     }
+
+    evaluateAfterTraceForLevel();
   }
 
   // =========================================================
@@ -921,6 +1044,47 @@
           ? `寻路成功！共 ${getActualMoves()} 步，探索 ${Number(metrics.expanded) || 0} 个节点。`
           : `没有找到可行路径，共探索 ${Number(metrics.expanded) || 0} 个节点。`
       );
+    }
+
+    evaluateAfterTraceForLevel();
+  }
+
+  function evaluateAfterTraceForLevel() {
+    if (state.playMode !== 'level' || !state.trace) return;
+
+    const expanded = Math.max(
+      0,
+      Number(state.trace.metrics && state.trace.metrics.expanded) || 0
+    );
+    const alreadyPassed = isLevelPassed(state.levelId);
+
+    if (state.levelId === 'unreachable') {
+      if (alreadyPassed) {
+        if (!state.trace.found) {
+          setStatus('success', '目标完成 · 无路可达');
+        }
+        return;
+      }
+
+      if (!state.trace.found && expanded > 0) {
+        completeLevel(
+          'unreachable',
+          `A* 返回 found=false，并扩展了 ${expanded} 个可达节点。`
+        );
+      } else if (state.trace.found) {
+        setLevelHint('fail', '当前搜索仍能抵达终点；请用「重置关卡」恢复固定地图。');
+      } else {
+        setLevelHint('fail', '搜索返回无路，但扩展节点数为 0；请重置关卡后再试。');
+      }
+      return;
+    }
+
+    if (alreadyPassed) return;
+
+    if (state.levelId === 'heuristic') {
+      setLevelHint('info', '本关请点击「运行对比」，验证 A* 扩展节点少于 BFS。');
+    } else if (state.levelId === 'tiebreak') {
+      setLevelHint('info', '本关请点击「运行两种平局」，比较 h 与 key 的访问顺序。');
     }
   }
 
@@ -1467,8 +1631,38 @@
   // 工具与地图编辑
   // =========================================================
 
+  function isEditingLocked() {
+    return state.playMode === 'level';
+  }
+
+  function lockEditingTools() {
+    dom.toolButtons.forEach((button) => {
+      button.disabled = true;
+      button.title = '关卡模式：固定地图，编辑工具已锁定';
+    });
+    dom.randomBtn.disabled = true;
+    dom.clearBtn.disabled = true;
+    dom.randomBtn.title = '关卡模式：固定地图，随机地图已锁定';
+    dom.clearBtn.title = '关卡模式：固定地图，清空障碍已锁定';
+    if (dom.trapMapBtn) {
+      dom.trapMapBtn.disabled = true;
+      dom.trapMapBtn.title = '关卡模式：固定地图，绕路陷阱已锁定';
+    }
+    if (dom.trapRestoreBtn) {
+      dom.trapRestoreBtn.disabled = true;
+    }
+    canvasWrap.classList.add('is-locked');
+    dom.hintText.textContent = '关卡模式：地图、起点与终点已锁定；请使用上方关卡动作。';
+    canvas.setAttribute(
+      'aria-label',
+      '20 乘 20 的关卡固定地图，编辑已锁定。使用顶部关卡动作完成目标。'
+    );
+    announce('关卡模式，地图编辑已锁定。完成上方关卡动作后会自动判定目标。');
+  }
+
   function selectTool(tool, silent = false) {
     if (!TOOL_INFO[tool]) return;
+    if (isEditingLocked() && !silent) return;
 
     hideResultOverlay();
     state.tool = tool;
@@ -1488,6 +1682,11 @@
   }
 
   function prepareForEdit() {
+    if (isEditingLocked()) {
+      showToast('关卡模式地图已锁定，请使用上方关卡动作', 1800);
+      return false;
+    }
+
     exitTrapMode();
     invalidateComparison();
 
@@ -1649,6 +1848,11 @@
   }
 
   function clearWalls() {
+    if (isEditingLocked()) {
+      showToast('关卡模式地图已锁定，请使用「重置关卡」', 1800);
+      return;
+    }
+
     hideResultOverlay();
     exitTrapMode();
 
@@ -1673,6 +1877,11 @@
   }
 
   function generateRandomMap() {
+    if (isEditingLocked()) {
+      showToast('关卡模式地图已锁定，请使用「重置关卡」', 1800);
+      return;
+    }
+
     hideResultOverlay();
     exitTrapMode();
 
@@ -2053,6 +2262,11 @@
   }
 
   function loadTrapMap() {
+    if (isEditingLocked()) {
+      showToast('关卡模式地图已锁定，请使用「重置关卡」', 1800);
+      return;
+    }
+
     hideToast();
     hideResultOverlay();
 
@@ -2102,6 +2316,11 @@
   }
 
   function restoreTrapMap() {
+    if (isEditingLocked()) {
+      showToast('关卡模式地图已锁定，请使用「重置关卡」', 1800);
+      return;
+    }
+
     const snapshot = state.trapSnapshot;
 
     if (!snapshot) {
@@ -2570,7 +2789,28 @@
       return;
     }
 
+    evaluateHeuristicLevelAuto(comparison);
     announce(`算法对比完成。${dom.compareStatus.textContent}`);
+  }
+
+  function evaluateHeuristicLevelAuto(comparison) {
+    if (state.playMode !== 'level' || state.levelId !== 'heuristic') return;
+
+    const astarExpanded = Math.max(0, Number(comparison && comparison.astar && comparison.astar.expanded) || 0);
+    const bfsExpanded = Math.max(0, Number(comparison && comparison.bfs && comparison.bfs.expanded) || 0);
+
+    if (astarExpanded < bfsExpanded) {
+      completeLevel(
+        'heuristic',
+        `A* 扩展 ${astarExpanded} 个节点，BFS 扩展 ${bfsExpanded} 个，A* 更少。`
+      );
+    } else if (!isLevelPassed('heuristic')) {
+      setLevelHint(
+        'fail',
+        `A* 扩展 ${astarExpanded} 个，BFS 扩展 ${bfsExpanded} 个；A* 没有更少。把导航风格切回「标准」后再运行一次对比。`
+      );
+      showToast('目标未达成：让 A* 扩展节点少于 BFS');
+    }
   }
 
   function renderComparison(comparison) {
@@ -2660,6 +2900,7 @@
   // =========================================================
 
   function initLevels() {
+    state.levelId = state.requestedLevel || 'heuristic';
     refreshLevelMastery();
     selectLevel(state.levelId);
   }
@@ -2669,6 +2910,9 @@
     if (!level) return;
 
     state.levelId = levelId;
+    if (state.playMode === 'level') {
+      document.body.dataset.levelId = levelId;
+    }
 
     dom.levelTabs.forEach((button) => {
       const active = button.dataset.level === levelId;
@@ -2682,32 +2926,101 @@
     dom.quizQuestion.textContent = level.quiz.question;
     dom.quizFeedback.hidden = true;
     dom.quizFeedback.className = 'quiz-feedback';
+    if (dom.levelActionBtn) dom.levelActionBtn.textContent = levelActionLabel(levelId);
+    if (dom.missionEyebrowNote) {
+      dom.missionEyebrowNote.textContent = `LEVEL ${level.order} / 3`;
+    }
 
     renderQuizOptions();
+    refreshLevelMastery();
     renderLevelFeedback();
-    renderLevelProgress();
+    renderLevelLive();
+    renderLevelCta();
+    renderNextCta();
+    renderQuizGate();
   }
 
-  function loadLevel(levelId) {
+  function levelActionLabel(levelId) {
+    if (levelId === 'tiebreak') return '运行两种平局';
+    if (levelId === 'unreachable') return '开始并验证';
+    return '运行对比';
+  }
+
+  function loadLevel(levelId, { initial = false } = {}) {
+    if (state.playMode !== 'level') return;
+
     const level = LEVELS[levelId];
     if (!level) return;
 
     hideToast();
     applyLevelMap(levelId);
+    clearComparisonView('固定关卡地图已就绪；运行关卡动作后会自动判定目标。');
 
     const runtime = state.levelRuntime[levelId];
+    const record = getLevelRecord(levelId);
     runtime.loaded = true;
-    runtime.checked = false;
-    runtime.passed = false;
-    runtime.feedback = {
-      state: 'info',
-      text: `已载入「${level.name}」地图。答对下方小测即可掌握本关。`
-    };
+    runtime.checked = Boolean(record.passed);
+    runtime.passed = Boolean(record.passed);
+    runtime.quizCorrect = Boolean(record.quizCorrect);
+    runtime.quizIndex = null;
+    runtime.feedback = record.quizCorrect
+      ? { state: 'pass', text: '✓ 本关已掌握。可以复习目标，或从下方进入下一关。' }
+      : record.passed
+        ? { state: 'pass', text: '✓ 目标已完成，小测已解锁。' }
+        : { state: 'info', text: '固定地图已就绪。使用上方关卡动作，系统会自动判定目标。' };
 
     selectLevel(levelId);
-    setStatus('idle', '关卡地图已载入');
-    showToast(`已载入关卡：${level.name}`);
-    announce(`已载入关卡 ${level.name}。${level.goal}`);
+    setStatus('idle', initial ? '关卡已就绪' : '关卡已重置');
+    if (!initial) {
+      showToast(`已重置关卡：${level.name}`);
+    }
+    announce(`关卡 ${level.name}。${level.goal}`);
+  }
+
+  function runLevelAction() {
+    if (state.playMode !== 'level') return;
+
+    hideToast();
+    if (!isEngineReady()) {
+      setStatus('failed', '引擎未加载');
+      showToast('引擎未加载，暂时无法运行关卡动作');
+      return;
+    }
+
+    if (state.levelId === 'heuristic') {
+      selectRailTab('compare');
+      runComparison();
+    } else if (state.levelId === 'tiebreak') {
+      runTiebreakDemo();
+    } else {
+      selectRailTab('status');
+      startSearch();
+    }
+  }
+
+  function runTiebreakDemo() {
+    let outcome;
+    try {
+      outcome = evaluateTiebreakLevel();
+    } catch (error) {
+      console.error('平局对比失败：', error);
+      setLevelHint('fail', `平局对比失败：${error.message || '请稍后重试'}`);
+      showToast('平局对比失败，请重试');
+      return;
+    }
+
+    if (!outcome) return;
+
+    if (outcome.passed) {
+      completeLevel('tiebreak', outcome.detail);
+      setStatus('success', '两种平局已比较');
+    } else if (!isLevelPassed('tiebreak')) {
+      setLevelHint('fail', outcome.detail);
+      setStatus('failed', '平局对比未通过');
+      showToast('尚未达成目标：访问顺序或路径步数不满足条件');
+    }
+
+    announce(outcome.detail);
   }
 
   function applyLevelMap(levelId) {
@@ -2741,42 +3054,184 @@
     resetRunState({ clearPredictionInput: true });
   }
 
-  function checkSelectedLevel() {
-    const levelId = state.levelId;
-    const level = LEVELS[levelId];
-    const runtime = state.levelRuntime[levelId];
-    if (!level) return;
+  function getLevelRecord(levelId) {
+    const stored = getStoredLevels();
+    return stored[levelId] || {};
+  }
 
-    let outcome;
-    try {
-      outcome = evaluateLevel(levelId);
-    } catch (error) {
-      console.error('关卡检查失败：', error);
-      runtime.feedback = {
-        state: 'fail',
-        text: `检查失败：${error.message || '请稍后重试'}`
-      };
+  function isLevelPassed(levelId) {
+    const runtime = state.levelRuntime[levelId] || {};
+    return Boolean(getLevelRecord(levelId).passed || runtime.passed);
+  }
+
+  function isLevelMastered(levelId) {
+    const runtime = state.levelRuntime[levelId] || {};
+    return Boolean(getLevelRecord(levelId).quizCorrect || runtime.quizCorrect);
+  }
+
+  function setLevelHint(stateName, text) {
+    const runtime = state.levelRuntime[state.levelId];
+    if (!runtime) return;
+    runtime.feedback = { state: stateName, text };
+    renderLevelFeedback();
+    renderLevelLive();
+  }
+
+  function completeLevel(levelId, detail) {
+    const runtime = state.levelRuntime[levelId];
+    if (!runtime) return;
+
+    const alreadyPassed = isLevelPassed(levelId);
+    runtime.passed = true;
+    runtime.checked = true;
+    runtime.feedback = { state: 'pass', text: `✓ 目标完成。${detail}` };
+
+    if (!alreadyPassed) {
+      persistLevel(levelId);
+      setStatus('success', '目标完成 · 待小测');
+      showToast('✓ 目标完成 · 去答小测', 3200);
+      announce(`目标完成。${detail} 小测已解锁。`);
+    } else {
+      refreshLevelMastery();
       renderLevelFeedback();
-      showToast(error.message || '关卡检查失败，请重试');
+      renderLevelLive();
+    }
+
+    renderLevelCta();
+    renderNextCta();
+    renderQuizGate();
+  }
+
+  function renderLevelLive() {
+    if (!dom.levelGoalBadge || !dom.levelInlineState || !dom.levelLiveText) return;
+
+    const levelId = state.levelId;
+    const runtime = state.levelRuntime[levelId] || {};
+    const record = getLevelRecord(levelId);
+    const passed = Boolean(record.passed || runtime.passed);
+    const mastered = Boolean(record.quizCorrect || runtime.quizCorrect);
+
+    let dataState = 'idle';
+    let badge = '目标未完成';
+    let text = '使用上方关卡动作，系统会自动判定目标。';
+
+    if (mastered) {
+      dataState = 'mastered';
+      badge = '已掌握';
+      text = '本关目标与小测都已完成，可以复习或前往下一关。';
+    } else if (passed) {
+      dataState = 'pass';
+      badge = '目标完成';
+      text = runtime.feedback && runtime.feedback.state === 'pass'
+        ? `${runtime.feedback.text} 小测已解锁。`
+        : '目标已通过，点击「目标完成 · 去答小测」完成最后一步。';
+    } else if (runtime.feedback) {
+      text = runtime.feedback.text;
+      dataState = runtime.feedback.state === 'fail' ? 'fail' : 'idle';
+    }
+
+    dom.levelGoalBadge.dataset.state = dataState;
+    dom.levelGoalBadge.textContent = badge;
+    dom.levelInlineState.dataset.state = dataState;
+    dom.levelLiveText.textContent = text;
+  }
+
+  function renderLevelCta() {
+    if (!dom.levelCta) return;
+
+    dom.levelCta.textContent = '';
+    const levelId = state.levelId;
+    const runtime = state.levelRuntime[levelId] || {};
+    const record = getLevelRecord(levelId);
+    const passed = Boolean(record.passed || runtime.passed);
+    const mastered = Boolean(record.quizCorrect || runtime.quizCorrect);
+
+    dom.levelCta.hidden = state.playMode !== 'level' || (!passed && !mastered);
+    if (dom.levelCta.hidden) return;
+
+    if (mastered) {
+      appendMasteredCtas(dom.levelCta);
       return;
     }
 
-    if (!outcome) return;
+    const quizButton = document.createElement('button');
+    quizButton.type = 'button';
+    quizButton.className = 'level-cta-primary';
+    quizButton.textContent = '目标完成 · 去答小测';
+    quizButton.addEventListener('click', () => openLevelDetails({ focusQuiz: true }));
+    dom.levelCta.appendChild(quizButton);
+  }
 
-    runtime.checked = true;
-    runtime.passed = Boolean(outcome.passed);
-    runtime.feedback = {
-      state: outcome.passed ? 'pass' : 'fail',
-      text: `${outcome.passed ? '✓ 目标达成。' : '✗ 尚未达成。'} ${outcome.detail}`
-    };
+  function renderNextCta() {
+    if (!dom.levelNextCta) return;
 
-    renderLevelFeedback();
-    persistLevel(levelId);
-    showToast(
-      outcome.passed ? '✓ 目标已通过，掌握度已更新' : '目标未通过，打开任务详情查看提示',
-      2800
-    );
-    announce(`${level.name}：${outcome.passed ? '目标通过' : '目标未通过'}。${outcome.detail}`);
+    dom.levelNextCta.textContent = '';
+    const levelId = state.levelId;
+    const runtime = state.levelRuntime[levelId] || {};
+    const record = getLevelRecord(levelId);
+    const mastered = Boolean(record.quizCorrect || runtime.quizCorrect);
+
+    dom.levelNextCta.hidden = state.playMode !== 'level' || !mastered;
+    if (dom.levelNextCta.hidden) return;
+
+    appendMasteredCtas(dom.levelNextCta);
+  }
+
+  function appendMasteredCtas(container) {
+    const nextId = nextLevelId(state.levelId);
+    const primary = document.createElement('a');
+    primary.className = 'level-cta-primary';
+
+    if (nextId) {
+      primary.href = `play.html?level=${nextId}`;
+      primary.textContent = '已掌握 · 下一关 →';
+      primary.dataset.nextLevel = nextId;
+    } else {
+      primary.href = 'play.html?mode=custom';
+      primary.textContent = '已掌握 · 去自由探索 →';
+    }
+
+    const secondary = document.createElement('a');
+    secondary.className = 'level-cta-secondary';
+    secondary.href = 'index.html';
+    secondary.textContent = '返回关卡选择';
+
+    container.append(primary, secondary);
+  }
+
+  function nextLevelId(levelId) {
+    const order = ['heuristic', 'tiebreak', 'unreachable'];
+    const index = order.indexOf(levelId);
+    return index >= 0 && index < order.length - 1 ? order[index + 1] : null;
+  }
+
+  function renderQuizGate() {
+    if (state.playMode !== 'level') {
+      if (dom.levelQuizBlock) dom.levelQuizBlock.hidden = true;
+      if (dom.levelQuizLock) dom.levelQuizLock.hidden = true;
+      return;
+    }
+
+    const levelId = state.levelId;
+    const runtime = state.levelRuntime[levelId] || {};
+    const record = getLevelRecord(levelId);
+    const passed = Boolean(record.passed || runtime.passed);
+    const mastered = Boolean(record.quizCorrect || runtime.quizCorrect);
+
+    if (dom.levelQuizLock) {
+      dom.levelQuizLock.hidden = passed;
+      dom.levelQuizLock.textContent = '目标未完成，小测暂时锁定。';
+    }
+    if (dom.levelQuizBlock) {
+      dom.levelQuizBlock.hidden = !passed;
+      dom.levelQuizBlock.classList.toggle('is-solved', mastered);
+    }
+    if (dom.quizSolvedNote) {
+      dom.quizSolvedNote.hidden = !mastered;
+    }
+    if (dom.quizSubmitBtn) {
+      dom.quizSubmitBtn.disabled = !passed || mastered;
+    }
   }
 
   function evaluateLevel(levelId) {
@@ -2963,9 +3418,22 @@
   }
 
   function submitQuiz() {
+    if (state.playMode !== 'level') return;
+
     const level = LEVELS[state.levelId];
     const runtime = state.levelRuntime[state.levelId];
-    if (!level) return;
+    if (!level || !runtime) return;
+
+    if (!isLevelPassed(state.levelId)) {
+      showToast('先完成关卡目标，小测才会解锁');
+      renderQuizGate();
+      return;
+    }
+
+    if (isLevelMastered(state.levelId)) {
+      showToast('本关小测已通过，可以进行下一关');
+      return;
+    }
 
     if (runtime.quizIndex === null) {
       showToast('请先选择一个答案');
@@ -2976,7 +3444,6 @@
     if (!selected) return;
 
     runtime.quizCorrect = Boolean(selected.correct) || runtime.quizCorrect;
-    if (selected.correct) runtime.passed = true;
 
     Array.from(dom.quizOptions.querySelectorAll('.quiz-option')).forEach((button, index) => {
       button.classList.remove('is-correct', 'is-wrong');
@@ -2994,7 +3461,17 @@
       : `✗ 再想想。提示：${level.quiz.hint}`;
 
     persistLevel(state.levelId);
-    announce(selected.correct ? '小测回答正确，已记录进度。' : '小测回答错误，可以再试一次。');
+    renderLevelCta();
+    renderNextCta();
+    renderQuizGate();
+    renderLevelLive();
+
+    if (selected.correct) {
+      showToast('✓ 已掌握本关 · 下一关已解锁', 3200);
+      announce('小测回答正确，本关已掌握。');
+    } else {
+      announce('小测回答错误，可以再试一次。');
+    }
   }
 
   function persistLevel(levelId) {
@@ -3036,6 +3513,10 @@
   function refreshLevelMastery() {
     updateLevelBadges();
     renderLevelProgress();
+    renderLevelCta();
+    renderNextCta();
+    renderQuizGate();
+    renderLevelLive();
   }
 
   function updateLevelBadges() {
@@ -3053,7 +3534,7 @@
       const mastered = quizCorrect;
       const partial = passed && !quizCorrect;
 
-      badge.textContent = mastered ? '已掌握' : partial ? '进行中' : '未掌握';
+      badge.textContent = mastered ? '已掌握' : partial ? '待小测' : '未掌握';
       badge.dataset.state = mastered ? 'mastered' : partial ? 'partial' : 'idle';
       button.classList.toggle('is-mastered', mastered);
     });
@@ -3069,16 +3550,20 @@
     const quizCorrect = Boolean(record.quizCorrect || runtime.quizCorrect);
 
     dom.levelQuizPill.dataset.state = quizCorrect ? 'pass' : 'idle';
-    dom.levelQuizPill.textContent = quizCorrect ? '小测已通过' : '小测待完成';
+    dom.levelQuizPill.textContent = quizCorrect
+      ? '小测已通过'
+      : passed
+        ? '小测已解锁'
+        : '小测未解锁';
 
     let masteryState = 'idle';
-    let masteryText = '未掌握';
+    let masteryText = '目标未完成';
     if (quizCorrect) {
       masteryState = 'mastered';
       masteryText = '已掌握';
     } else if (passed) {
       masteryState = 'partial';
-      masteryText = '已完成 · 小测待完成';
+      masteryText = '目标完成 · 待小测';
     }
 
     dom.levelMasteryText.dataset.state = masteryState;
@@ -3091,7 +3576,7 @@
 
     if (!runtime.feedback) {
       dom.levelFeedback.dataset.state = 'idle';
-      dom.levelFeedback.textContent = '选择关卡并载入地图；答对小测即可掌握本关。';
+      dom.levelFeedback.textContent = '完成关卡目标后，这里会显示判定结果与小测入口。';
       return;
     }
 
@@ -3191,6 +3676,7 @@
     if (state.overlayOpen) return;
 
     if (['1', '2', '3', '4'].includes(event.key)) {
+      if (isEditingLocked()) return;
       const tools = ['wall', 'start', 'end', 'erase'];
       selectTool(tools[Number(event.key) - 1]);
       event.preventDefault();
@@ -3200,9 +3686,11 @@
     const key = event.key.toLowerCase();
 
     if (key === 'r') {
+      if (isEditingLocked()) return;
       event.preventDefault();
       generateRandomMap();
     } else if (key === 'c') {
+      if (isEditingLocked()) return;
       event.preventDefault();
       clearWalls();
     }

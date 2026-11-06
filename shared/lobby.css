@@ -1629,3 +1629,95 @@ body.assessment-open {
     transition: none;
   }
 }
+
+/* v1 IA：把学习测评入口放大，并在卡片里解释“为什么做” */
+.assessment-entry {
+  max-width: 640px;
+  margin-top: 22px;
+}
+
+.assessment-entry-btn {
+  gap: 14px;
+  padding: 16px 16px 16px 18px;
+  border-radius: 18px;
+}
+
+.assessment-entry-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+}
+
+.assessment-entry-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.assessment-entry-copy {
+  gap: 2px;
+}
+
+.assessment-entry-kicker {
+  font-size: 8px;
+}
+
+.assessment-entry-copy strong {
+  font-size: 16px;
+}
+
+.assessment-entry-hint {
+  overflow: visible;
+  font-size: 10.5px;
+  white-space: normal;
+}
+
+.assessment-entry-purpose {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+  white-space: normal;
+}
+
+.assessment-entry-cta {
+  min-height: 36px;
+  padding: 0 14px;
+  font-size: 11px;
+}
+
+@media (max-width: 720px) {
+  .assessment-entry {
+    max-width: 100%;
+  }
+
+  .assessment-entry-btn {
+    gap: 10px;
+    padding: 13px;
+    border-radius: 16px;
+  }
+
+  .assessment-entry-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .assessment-entry-icon svg {
+    width: 21px;
+    height: 21px;
+  }
+
+  .assessment-entry-copy strong {
+    font-size: 14px;
+  }
+
+  .assessment-entry-purpose {
+    font-size: 9.5px;
+  }
+
+  .assessment-entry-cta {
+    min-height: 32px;
+    padding: 0 10px;
+    font-size: 9.5px;
+  }
+}

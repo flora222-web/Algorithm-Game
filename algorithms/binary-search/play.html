@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="二分拆弹驾驶舱：固定关卡或自由探索，先预测下一次 mid，再用 7 根拆弹线在 1–100 中锁定正确密码。包含区间状态、猜测历史、7 根拆弹线、角色反转与四语言源码解析。" />
+  <meta name="theme-color" content="#f4f8fd" />
+  <title>二分拆弹 · 驾驶舱</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23e95d6f'/%3E%3Ccircle cx='15' cy='18' r='9' fill='%23fff' opacity='.94'/%3E%3Cpath d='M20 10c2-3 5-3 7-1' fill='none' stroke='%23ffe2a8' stroke-width='2.6' stroke-linecap='round'/%3E%3Ccircle cx='27' cy='8' r='2.2' fill='%23ffc65c'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="../../shared/base.css" />
+  <link rel="stylesheet" href="../../shared/docs.css" />
+  <link rel="stylesheet" href="binary-search.css" />
+</head>
+<body data-page="binary" data-root="../..">
+  <div class="ambient ambient--blue" aria-hidden="true"></div>
+  <div class="ambient ambient--coral" aria-hidden="true"></div>
+
+  <main class="app">
+    <header id="siteHeader"></header>
+
+    <section class="mission-bar" aria-labelledby="levelTitle">
+      <div class="mission-intro">
+        <a class="play-back-link" id="playBackLink" href="index.html" data-nav-link hidden>← 关卡选择</a>
+        <p class="kicker" id="playModeKicker">GUIDED LEVELS · 6 步通关</p>
+        <div class="mission-title-row">
+          <h2 id="levelTitle">关卡 · 掌握徽章</h2>
+          <span class="level-mastery" id="levelMastery">0 / 6 掌握</span>
+        </div>
+        <p class="level-goal" id="levelGoal"></p>
+      </div>
+
+      <div class="level-tabs" id="levelTabs" role="tablist" aria-label="二分查找关卡" hidden>
+        <button class="level-tab is-active" type="button" role="tab" id="levelTabExample" data-level="example" aria-controls="levelPanelExample" aria-selected="true">
+          <span class="level-tab-top"><span class="level-tab-index">01</span><span class="level-badge" data-state="idle">未开始</span></span>
+          <strong>示例</strong>
+          <small>固定 secret 62</small>
+        </button>
+        <button class="level-tab" type="button" role="tab" id="levelTabMidpoint" data-level="midpoint" aria-controls="levelPanelMidpoint" aria-selected="false">
+          <span class="level-tab-top"><span class="level-tab-index">02</span><span class="level-badge" data-state="idle">未开始</span></span>
+          <strong>7 根线</strong>
+          <small>拆弹 + 小测</small>
+        </button>
+        <button class="level-tab" type="button" role="tab" id="levelTabInvariant" data-level="invariant" aria-controls="levelPanelInvariant" aria-selected="false">
+          <span class="level-tab-top"><span class="level-tab-index">03</span><span class="level-badge" data-state="idle">未开始</span></span>
+          <strong>新区间</strong>
+          <small>连续 3 次校验</small>
+        </button>
+        <button class="level-tab" type="button" role="tab" id="levelTabBoundary" data-level="boundary" aria-controls="levelPanelBoundary" aria-selected="false">
+          <span class="level-tab-top"><span class="level-tab-index">04</span><span class="level-badge" data-state="idle">未开始</span></span>
+          <strong>死循环</strong>
+          <small>low = mid 排查</small>
+        </button>
+        <button class="level-tab" type="button" role="tab" id="levelTabDuplicates" data-level="duplicates" aria-controls="levelPanelDuplicates" aria-selected="false">
+          <span class="level-tab-top"><span class="level-tab-index">05</span><span class="level-badge" data-state="idle">未开始</span></span>
+          <strong>重复元素</strong>
+          <small>第一个 / 最后一个</small>
+        </button>
+        <button class="level-tab" type="button" role="tab" id="levelTabThreshold" data-level="threshold" aria-controls="levelPanelThreshold" aria-selected="false">
+          <span class="level-tab-top"><span class="level-tab-index">06</span><span class="level-badge" data-state="idle">未开始</span></span>
+          <strong>最小电量</strong>
+          <small>是 / 否 · 找最小容量</small>
+        </button>
+      </div>
+
+      <div class="mission-actions">
+        <div class="level-status-row">
+          <span class="level-status" id="levelStatus" data-tone="neutral">未通过</span>
+          <span class="level-status" id="levelQuizStatus" data-tone="neutral">小测 —</span>
+        </div>
+        <div class="mission-action-buttons">
+          <button class="mission-details-btn oracle-open-btn" id="oracleOpenBtn" type="button" aria-haspopup="dialog" aria-controls="oracleDialog">
+            <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M3 5.5h8.6M9.2 3l2.5 2.5-2.5 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M13 10.5H4.4M6.8 8l-2.5 2.5L6.8 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            角色反转 · 你当出题人
+          </button>
+          <button class="mission-details-btn" id="taskDetailsBtn" type="button" aria-controls="railPaneLevel">
+            任务详情
+            <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M3 8h9M8.7 4.5 12.2 8l-3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="level-completion" id="levelCompletion" aria-live="polite" hidden>
+      <div class="level-completion-main">
+        <span class="level-completion-dot" aria-hidden="true"></span>
+        <div>
+          <strong id="levelCompletionTitle">目标完成</strong>
+          <p id="levelCompletionText">去答小测，点亮掌握徽章。</p>
+        </div>
+      </div>
+      <div class="level-completion-actions">
+        <button class="level-completion-btn" id="levelQuizJump" type="button">目标完成 · 去答小测</button>
+        <a class="level-completion-btn level-completion-btn--next" id="levelNextLink" href="#" data-nav-link hidden>已掌握 · 下一关 →</a>
+        <a class="level-completion-back" id="levelCompletionBack" href="index.html" data-nav-link>返回关卡选择</a>
+      </div>
+    </section>
+
+    <div class="game-grid binary-grid">
+      <section class="card bomb-card" id="bombCard" aria-labelledby="bombTitle">
+        <header class="board-head bomb-head">
+          <div class="section-title">
+            <span class="section-index" aria-hidden="true">01</span>
+            <div>
+              <p class="kicker">DISARM</p>
+              <h2 id="bombTitle">拆弹现场</h2>
+            </div>
+          </div>
+          <div class="status-pill" id="bombStatus" data-state="idle">
+            <span class="status-dot" aria-hidden="true"></span>
+            <span id="bombStatusText">等待开始</span>
+          </div>
+        </header>
+
+        <div class="bomb-stage">
+          <div class="bomb-visual" id="bombVisual" data-state="idle" aria-hidden="true">
+            <span class="bomb-halo"></span>
+            <span class="bomb-ring"></span>
+            <span class="bomb-fuse"></span>
+            <div class="bomb-body">
+              <span class="bomb-shine"></span>
+              <div class="bomb-display">
+                <span class="bomb-time" id="bombTime">07</span>
+                <span class="bomb-time-label" id="bombTimeLabel">WIRES LEFT</span>
+              </div>
+            </div>
+            <span class="bomb-spark"></span>
+            <span class="bomb-burst"></span>
+          </div>
+
+          <div class="bomb-console">
+            <div class="console-main">
+              <p class="kicker">DISARM SEQUENCE · TRAINING</p>
+              <h2>7 根线，先算中点再拆弹</h2>
+              <p class="bomb-lead" id="bombLead">密码藏在 1–100 之间。先预测下一次 mid，再提交猜测；7 根线用完前锁定密码。</p>
+
+              <div class="mobile-start-row" id="inlineStartRow">
+                <button class="start-btn start-btn--danger start-btn--inline" id="startBombBtnInline" type="button">
+                  <span class="start-icon" aria-hidden="true">
+                    <svg viewBox="0 0 20 20" fill="none">
+                      <circle cx="9.4" cy="11.6" r="5.2" stroke="currentColor" stroke-width="1.6" />
+                      <path d="M13.1 7.4c.5-1 1.4-1.8 2.5-2.1M14.6 8.7l2.2-1.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                      <path d="M8.2 11.6h2.4M9.4 10.4v2.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+                    </svg>
+                  </span>
+                  <span id="startBombLabelInline">开始拆弹</span>
+                </button>
+                <span class="inline-start-note">训练模式 · 7 根线 · 无倒计时</span>
+              </div>
+
+              <button class="start-btn start-btn--danger console-start" id="startBombBtn" type="button">
+                <span class="start-icon" aria-hidden="true">
+                  <svg viewBox="0 0 20 20" fill="none">
+                    <circle cx="9.4" cy="11.6" r="5.2" stroke="currentColor" stroke-width="1.6" />
+                    <path d="M13.1 7.4c.5-1 1.4-1.8 2.5-2.1M14.6 8.7l2.2-1.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                    <path d="M8.2 11.6h2.4M9.4 10.4v2.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+                  </svg>
+                </span>
+                <span id="startBombLabel">开始拆弹</span>
+              </button>
+
+              <div class="feedback-box" id="feedbackBox" data-tone="neutral" role="status" aria-live="polite">
+                <span class="feedback-dot" aria-hidden="true"></span>
+                <p id="feedbackText">准备好后点击「开始拆弹」。训练模式没有倒计时，只有 7 根线。</p>
+              </div>
+            </div>
+
+            <div class="console-forms">
+              <section class="predict-card" id="predictionCard" aria-labelledby="predictTitle">
+                <div class="predict-head">
+                  <span class="predict-kicker" id="predictTitle">LEARNING CHECK</span>
+                  <span class="predict-badge">预测下一个 mid</span>
+                </div>
+                <form class="predict-form" id="predictForm" novalidate>
+                  <label class="predict-label" for="predictInput">下一次 <code>mid</code> 是多少？</label>
+                  <div class="predict-row">
+                    <input
+                      class="predict-input"
+                      id="predictInput"
+                      type="number"
+                      inputmode="numeric"
+                      min="1"
+                      max="100"
+                      step="1"
+                      placeholder="先算再填"
+                      autocomplete="off"
+                      aria-describedby="predictFeedback"
+                      disabled
+                    />
+                    <button class="predict-submit" id="predictSubmit" type="submit" disabled>验证</button>
+                  </div>
+                  <p class="predict-feedback" id="predictFeedback" data-tone="neutral" role="status" aria-live="polite">开局后，用公式算出下一次 mid，再验证。</p>
+                </form>
+              </section>
+
+              <form class="guess-form" id="guessForm" novalidate>
+                <div class="guess-label-row">
+                  <label class="guess-label" for="guessInput">提交猜测 · 1–100</label>
+                  <span class="guess-wire-note" id="guessWireNote">拆弹线 7 / 7</span>
+                </div>
+                <div class="guess-row">
+                  <input
+                    class="guess-input"
+                    id="guessInput"
+                    type="number"
+                    inputmode="numeric"
+                    min="1"
+                    max="100"
+                    step="1"
+                    placeholder="1 – 100"
+                    autocomplete="off"
+                    aria-describedby="guessHelp feedbackText"
+                    disabled
+                  />
+                  <button class="guess-submit" id="guessSubmit" type="submit" disabled>确认</button>
+                </div>
+                <p class="guess-help" id="guessHelp">点击「开始拆弹」后开始。每轮先预测，再猜测。</p>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <div class="game-lower">
+        <section class="wire-panel" id="wirePanel" aria-labelledby="wireTitle" data-state="full">
+          <div class="wire-head">
+            <div>
+              <p class="kicker">WIRE BANK</p>
+              <h3 id="wireTitle">7 根拆弹线</h3>
+            </div>
+            <span class="wire-count" id="wireCount">7 / 7</span>
+          </div>
+          <ol class="wire-strip" id="wireStrip" aria-label="7 根拆弹线状态"></ol>
+          <p class="wire-note" id="wireNote">每局 7 根线，对应 7 次机会。每次合法猜测占用 1 根；猜错即剪断，线耗尽则爆炸。</p>
+        </section>
+
+        <section class="state-panel" aria-labelledby="stateTitle">
+          <div class="panel-mini-head">
+            <div>
+              <p class="kicker">STATE VECTOR</p>
+              <h3 id="stateTitle">区间状态</h3>
+            </div>
+            <span class="state-note">训练模式 · 无倒计时</span>
+          </div>
+
+          <div class="state-grid">
+            <div class="state-tile">
+              <span>low</span>
+              <strong id="stateLow">1</strong>
+            </div>
+            <div class="state-tile">
+              <span>high</span>
+              <strong id="stateHigh">100</strong>
+            </div>
+            <div class="state-tile state-tile--mid">
+              <span>mid · 下一次中点</span>
+              <strong id="stateMid">50</strong>
+            </div>
+            <div class="state-tile">
+              <span>remaining</span>
+              <strong id="stateRemaining">100</strong>
+              <small>个候选</small>
+            </div>
+            <div class="state-tile state-tile--invariant">
+              <span>invariant</span>
+              <strong id="stateInvariant">✓ 成立</strong>
+              <small id="stateInvariantRange">secret ∈ [1, 100]</small>
+            </div>
+            <div class="state-tile state-tile--wires">
+              <span>wires</span>
+              <strong id="stateWires">7 / 7</strong>
+            </div>
+          </div>
+
+          <p class="mid-formula" id="midFormula">
+            <span class="formula-rule" id="midFormulaRule">mid = low + floor((high − low) / 2)</span>
+            <span class="formula-calc" id="midFormulaCalc">= 1 + floor((100 − 1) / 2) = 50</span>
+          </p>
+        </section>
+        </div>
+
+        <section class="history-panel" aria-labelledby="historyTitle">
+          <div class="panel-mini-head">
+            <div>
+              <p class="kicker">COMPARE LOG</p>
+              <h3 id="historyTitle">猜测历史</h3>
+            </div>
+            <span class="history-count" id="historyCount">0 次</span>
+          </div>
+
+          <div class="history-wrap">
+            <table class="guess-table" id="guessTable">
+              <colgroup>
+                <col style="width: 18%" />
+                <col style="width: 18%" />
+                <col style="width: 22%" />
+                <col style="width: 19%" />
+                <col style="width: 23%" />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th scope="col">猜测</th>
+                  <th scope="col">反馈</th>
+                  <th scope="col">新区间</th>
+                  <th scope="col">剩余候选</th>
+                  <th scope="col">本次排除</th>
+                </tr>
+              </thead>
+              <tbody id="guessTableBody">
+                <tr class="history-empty">
+                  <td colspan="5">还没有猜测 · 先预测下一次 mid</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+      </section>
+
+      <aside class="sidebar binary-rail">
+        <div class="rail-tabs" id="railTabs" role="tablist" aria-label="数据与关卡">
+          <button class="rail-tab is-active" type="button" role="tab" id="railTabData" data-rail-tab="data" aria-controls="railPaneData" aria-selected="true">数据</button>
+          <button class="rail-tab" type="button" role="tab" id="railTabLevel" data-rail-tab="level" aria-controls="railPaneLevel" aria-selected="false">关卡</button>
+        </div>
+
+        <div class="rail-pane rail-pane--data" id="railPaneData" role="tabpanel" aria-labelledby="railTabData">
+        <section class="card data-card" aria-labelledby="bombDataTitle">
+          <header class="panel-head">
+            <div class="section-title">
+              <span class="section-index" aria-hidden="true">02</span>
+              <div>
+                <p class="kicker">LIVE DATA</p>
+                <h2 id="bombDataTitle">拆弹数据</h2>
+              </div>
+            </div>
+            <span class="live-tag"><i aria-hidden="true"></i>LIVE</span>
+          </header>
+
+          <div class="stat-list">
+            <div class="stat-row stat-row--mint">
+              <span class="stat-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="7.2" stroke="currentColor" stroke-width="1.8" />
+                  <circle cx="12" cy="12" r="2.4" fill="currentColor" />
+                  <path d="M12 3.5v2M12 18.5v2M3.5 12h2M18.5 12h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                </svg>
+              </span>
+              <div class="stat-copy">
+                <span class="stat-label">剩余候选</span>
+                <span class="stat-note">仍在候选区间内的数字</span>
+              </div>
+              <div class="stat-value"><strong id="candidateCount">100</strong><span>个</span></div>
+            </div>
+
+            <div class="stat-row stat-row--coral">
+              <span class="stat-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M5 6.2h14M8.2 3.8h7.6M6.8 6.2l.8 11.2c.1 1 .9 1.8 1.9 1.8h5c1 0 1.8-.8 1.9-1.8l.8-11.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+                  <path d="M10.2 10.1v5.4M13.8 10.1v5.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                </svg>
+              </span>
+              <div class="stat-copy">
+                <span class="stat-label">已排除</span>
+                <span class="stat-note">已经被候选区间剔除的数字</span>
+              </div>
+              <div class="stat-value"><strong id="eliminatedCount">0</strong><span>个</span></div>
+            </div>
+
+            <div class="stat-row stat-row--gold">
+              <span class="stat-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M7.5 4.5h9M12 4.5v3M8.3 7.5h7.4l1.4 8.1a4 4 0 0 1-4 4.7h-2.2a4 4 0 0 1-4-4.7l1.4-8.1Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+                  <path d="M9.8 12.3h4.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                </svg>
+              </span>
+              <div class="stat-copy">
+                <span class="stat-label">猜测次数</span>
+                <span class="stat-note">当前这一局已经提交的猜测</span>
+              </div>
+              <div class="stat-value"><strong id="attemptCount">0</strong><span>次</span></div>
+            </div>
+
+            <div class="stat-row stat-row--blue">
+              <span class="stat-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M12 3.6a8.4 8.4 0 1 1-8.4 8.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                  <path d="M12 7.2V12l3 2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+                  <path d="M3.6 8.2v3.8h3.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </span>
+              <div class="stat-copy">
+                <span class="stat-label">最优预算</span>
+                <span class="stat-note">⌈log₂100⌉ 次比较</span>
+              </div>
+              <div class="stat-value"><strong>7</strong><span>次</span></div>
+            </div>
+          </div>
+
+          <div class="predict-summary">
+            <div class="predict-summary-head">
+              <span>预测正确率</span>
+              <span class="predict-summary-record" id="predictionRecord">0 / 0 次</span>
+            </div>
+            <div class="predict-summary-value">
+              <strong id="predictionAccuracy">—</strong>
+            </div>
+            <div class="predict-meter" aria-hidden="true"><span id="predictMeterFill"></span></div>
+            <p class="predict-summary-note">每次验证“下一个 mid”都会写入本地学习记录。</p>
+          </div>
+
+          <div class="data-foot">
+            <span>最优策略 / 每次折半</span>
+            <code>⌈log₂100⌉ = 7</code>
+          </div>
+        </section>
+
+        <section class="card control-card bomb-control-card" aria-labelledby="bombControlTitle">
+          <header class="panel-head">
+            <div class="section-title">
+              <span class="section-index" aria-hidden="true">04</span>
+              <div>
+                <p class="kicker">RULES · SOURCE</p>
+                <h2 id="bombControlTitle">规则与源码</h2>
+              </div>
+            </div>
+          </header>
+
+          <div class="bomb-rules">
+            <p class="bomb-rules-title">7 根线拆弹规则</p>
+            <ol>
+              <li><b>点击开始</b>后随机锁定 1–100 的密码；训练模式没有倒计时。</li>
+              <li>先预测下一次 <b>mid</b>：用 <code>low + floor((high − low) / 2)</code> 计算。</li>
+              <li>提交 1–100 的猜测；每次合法猜测占用一根线，猜错就会<b>剪断它</b>。</li>
+              <li>7 根线耗尽即爆炸；在最后一根线上命中仍然算拆弹成功。</li>
+            </ol>
+          </div>
+
+          <p class="shortcut-note">
+            <kbd>Enter</kbd> 提交输入框 · <kbd>Esc</kbd> 关闭弹层
+          </p>
+
+          <button class="source-btn" id="openDocsBtn" type="button" aria-haspopup="dialog">
+            <span class="source-btn-icon" aria-hidden="true">
+              <svg viewBox="0 0 20 20" fill="none">
+                <path d="m7.3 5.4-4 4.6 4 4.6M12.7 5.4l4 4.6-4 4.6M11.1 3.5 8.9 16.5" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+            <span class="source-btn-copy">
+              <strong>二分查找源码与解析</strong>
+              <small>C++ · Java · Python · Go</small>
+            </span>
+            <svg class="source-btn-arrow" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <path d="M4.5 10h11M11 5.5l4.5 4.5-4.5 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+        </section>
+        </div>
+
+        <div class="rail-pane rail-pane--level" id="railPaneLevel" role="tabpanel" aria-labelledby="railTabLevel" hidden>
+        <section class="card level-card" aria-labelledby="levelPaneTitle">
+          <header class="panel-head">
+            <div class="section-title">
+              <span class="section-index" aria-hidden="true">03</span>
+              <div>
+                <p class="kicker">CURRENT LEVEL</p>
+                <h2 id="levelPaneTitle">当前关卡详情</h2>
+              </div>
+            </div>
+          </header>
+
+          <div class="level-body">
+            <div class="level-panel" id="levelPanelExample" data-panel="example" role="tabpanel" aria-labelledby="levelTabExample">
+              <div class="level-stepper">
+                <span id="exampleProgress">0 / 0 步</span>
+                <span id="exampleNote">点击开始，逐步观察区间</span>
+              </div>
+              <ol class="level-step-list" id="exampleSteps">
+                <li class="level-step-empty">尚未开始演示</li>
+              </ol>
+              <div class="level-actions">
+                <button class="level-btn level-btn--primary" id="exampleStart" type="button">开始演示</button>
+                <button class="level-btn" id="exampleNext" type="button" disabled>下一步</button>
+                <button class="level-btn" id="exampleAuto" type="button" disabled>自动演示</button>
+              </div>
+              <div class="level-quiz">
+                <p class="level-quiz-prompt">小测：固定 secret = 62 时，第一次 mid 是多少？</p>
+                <div class="level-quiz-options" id="exampleQuizOptions"></div>
+                <p class="level-quiz-feedback" id="exampleQuizFeedback" data-tone="neutral" role="status" aria-live="polite">先完成演示，再作答。</p>
+              </div>
+            </div>
+
+            <div class="level-panel" id="levelPanelMidpoint" data-panel="midpoint" role="tabpanel" aria-labelledby="levelTabMidpoint" hidden>
+              <p class="level-note">固定 secret = 37。用 7 根线拆弹成功即通过本关，再答对小测点亮掌握徽章。</p>
+              <div class="level-actions">
+                <button class="level-btn level-btn--primary" id="midpointStart" type="button">开始一局</button>
+              </div>
+              <div class="level-quiz">
+                <p class="level-quiz-prompt">小测：1–100 最坏为什么是 7 次？</p>
+                <div class="level-quiz-options" id="midpointQuizOptions"></div>
+                <p class="level-quiz-feedback" id="midpointQuizFeedback" data-tone="neutral" role="status" aria-live="polite">选一个最接近的答案。</p>
+              </div>
+            </div>
+
+            <div class="level-panel" id="levelPanelInvariant" data-panel="invariant" role="tabpanel" aria-labelledby="levelTabInvariant" hidden>
+              <p class="level-note">固定 secret = 74。每次合法错误猜测后写出新区间；连续答对 3 次点亮小测徽章，本局结束即通过。</p>
+              <div class="level-actions">
+                <button class="level-btn level-btn--primary" id="invariantStart" type="button">开始一局</button>
+                <span class="invariant-streak" id="invariantStreak">连续 0 / 3</span>
+              </div>
+              <div class="invariant-prompt" id="invariantPrompt" hidden>
+                <p class="invariant-question">猜错了！新区间是？</p>
+                <div class="invariant-inputs">
+                  <label for="invariantLow">low<input id="invariantLow" type="number" inputmode="numeric" min="1" max="100" step="1" autocomplete="off" /></label>
+                  <label for="invariantHigh">high<input id="invariantHigh" type="number" inputmode="numeric" min="1" max="100" step="1" autocomplete="off" /></label>
+                  <button class="level-btn level-btn--check" id="invariantCheck" type="button">校验</button>
+                </div>
+                <p class="level-quiz-feedback" id="invariantFeedback" data-tone="neutral" role="status" aria-live="polite">输入后按「校验」。</p>
+              </div>
+              <p class="level-note level-note--hint" id="invariantHint">开始一局，再故意猜错一次，就会出现新区间校验。</p>
+            </div>
+
+            <div class="level-panel" id="levelPanelBoundary" data-panel="boundary" role="tabpanel" aria-labelledby="levelTabBoundary" hidden>
+              <p class="level-note">这段二分在「猜小」时写成 <code>low = mid</code>，mid 永远无法被排除。固定运行 secret = 51，观察区间卡在 [50, 51]。</p>
+              <pre class="buggy-code" aria-label="带 bug 的二分代码"><code><span class="buggy-line"><i>1</i>while (low &lt;= high) {</span>
+<span class="buggy-line"><i>2</i>  mid = low + Math.floor((high - low) / 2);</span>
+<span class="buggy-line"><i>3</i>  if (a[mid] &lt; secret) {</span>
+<span class="buggy-line" data-bug-line="4"><i>4</i>    low = mid;</span>
+<span class="buggy-line"><i>5</i>  } else if (a[mid] &gt; secret) {</span>
+<span class="buggy-line"><i>6</i>    high = mid - 1;</span>
+<span class="buggy-line"><i>7</i>  } else return mid;</span>
+<span class="buggy-line"><i>8</i>}</span></code></pre>
+              <div class="level-actions">
+                <button class="level-btn level-btn--primary" id="boundaryRun" type="button">运行到卡住</button>
+              </div>
+              <div class="boundary-output" id="boundaryOutput" hidden>
+                <p class="boundary-summary" id="boundarySummary" role="status" aria-live="polite"></p>
+                <ol class="level-step-list level-step-list--mono" id="boundarySteps"></ol>
+                <div class="level-quiz" id="boundaryQuiz">
+                  <p class="level-quiz-prompt">小测：哪一行导致死循环？</p>
+                  <div class="level-quiz-options" id="boundaryQuizOptions"></div>
+                  <p class="level-quiz-feedback" id="boundaryQuizFeedback" data-tone="neutral" role="status" aria-live="polite">选一个最接近的答案。</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="level-panel" id="levelPanelDuplicates" data-panel="duplicates" role="tabpanel" aria-labelledby="levelTabDuplicates" hidden>
+              <p class="level-note">固定数组 <code>[1, 2, 2, 2, 4, 5, 5, 7, 9]</code>、目标 2、找第一个。一步一步观察区间怎样收缩。</p>
+              <p class="walkthrough-title" id="duplicatesTitle">找第一个 2</p>
+              <div class="walkthrough-controls">
+                <div class="segment-group" id="duplicatesTargetGroup" role="group" aria-label="选择目标值">
+                  <button class="segment-btn is-active" type="button" data-bound-target="2" aria-pressed="true">目标 2</button>
+                  <button class="segment-btn" type="button" data-bound-target="5" aria-pressed="false">目标 5</button>
+                </div>
+                <div class="segment-group" id="duplicatesModeGroup" role="group" aria-label="选择查找方向">
+                  <button class="segment-btn is-active" type="button" data-bound-mode="first" aria-pressed="true">找第一个</button>
+                  <button class="segment-btn" type="button" data-bound-mode="last" aria-pressed="false">找最后一个</button>
+                </div>
+              </div>
+              <div class="bound-array" id="duplicatesArray" aria-label="重复元素数组，含值与下标"></div>
+              <p class="walkthrough-state" id="duplicatesState">low = 0 · high = 8 · mid = —</p>
+              <p class="walkthrough-decision" id="duplicatesDecision">点击「下一步」，比较一次 mid。</p>
+              <ol class="level-step-list level-step-list--walkthrough" id="duplicatesSteps">
+                <li class="level-step-empty">还没有比较</li>
+              </ol>
+              <div class="level-actions">
+                <button class="level-btn level-btn--primary" id="duplicatesNext" type="button">下一步</button>
+                <button class="level-btn" id="duplicatesAuto" type="button">运行测试</button>
+                <button class="level-btn" id="duplicatesReset" type="button">重置</button>
+                <span class="walkthrough-progress" id="duplicatesProgress">0 步</span>
+              </div>
+              <div class="walkthrough-result" id="duplicatesResult" hidden>
+                <p class="walkthrough-result-main" id="duplicatesResultText"></p>
+                <p class="walkthrough-reveal" id="duplicatesReveal" hidden></p>
+              </div>
+              <div class="level-quiz">
+                <p class="level-quiz-prompt" id="duplicatesQuizPrompt">小测：命中 2 后，为什么还要继续收缩区间？</p>
+                <div class="level-quiz-options" id="duplicatesQuizOptions"></div>
+                <p class="level-quiz-feedback" id="duplicatesQuizFeedback" data-tone="neutral" role="status" aria-live="polite">先走完一遍，再作答。</p>
+              </div>
+            </div>
+
+            <div class="level-panel" id="levelPanelThreshold" data-panel="threshold" role="tabpanel" aria-labelledby="levelTabThreshold" hidden>
+              <p class="level-note">设备要撑过 8 小时，容量范围固定 1–100。真正的门槛没有告诉你，只能问：这个容量够不够？</p>
+              <div class="predicate-ask" id="thresholdAsk" data-tone="idle">
+                <p class="predicate-question" id="thresholdQuestion">容量 ? 能撑过 8 小时吗？</p>
+                <span class="predicate-answer" id="thresholdAnswer" data-tone="idle">待询问</span>
+              </div>
+              <div class="predicate-tiles">
+                <div><span>low</span><strong id="thresholdLow">1</strong></div>
+                <div><span>high</span><strong id="thresholdHigh">100</strong></div>
+                <div class="is-mid"><span>mid · 本次询问</span><strong id="thresholdMid">—</strong></div>
+              </div>
+              <p class="walkthrough-decision" id="thresholdDecision">点击「下一步」，问一次中点容量。</p>
+              <ol class="level-step-list level-step-list--walkthrough" id="thresholdSteps">
+                <li class="level-step-empty">还没有询问</li>
+              </ol>
+              <div class="level-actions">
+                <button class="level-btn level-btn--primary" id="thresholdNext" type="button">下一步</button>
+                <button class="level-btn" id="thresholdAuto" type="button">运行测试</button>
+                <button class="level-btn" id="thresholdReset" type="button">重置</button>
+                <span class="walkthrough-progress" id="thresholdProgress">0 步</span>
+              </div>
+              <div class="walkthrough-result" id="thresholdResult" hidden>
+                <p class="walkthrough-result-main" id="thresholdResultText"></p>
+                <p class="walkthrough-reveal" id="thresholdReveal" hidden></p>
+              </div>
+              <div class="level-quiz">
+                <p class="level-quiz-prompt">小测：为什么这里可以二分，而不是只能线性试？</p>
+                <div class="level-quiz-options" id="thresholdQuizOptions"></div>
+                <p class="level-quiz-feedback" id="thresholdQuizFeedback" data-tone="neutral" role="status" aria-live="polite">先走完一遍，再作答。</p>
+              </div>
+            </div>
+          </div>
+        </section>
+        </div>
+      </aside>
+    </div>
+
+    <footer class="page-footer">
+      <span>Binary Search × 7 Wires</span>
+      <span>先预测 mid · 再收紧区间 · 别剪断最后一根线</span>
+    </footer>
+  </main>
+
+  <div class="bomb-result-overlay" id="bombResultOverlay" hidden>
+    <div class="bomb-result-card" role="dialog" aria-modal="true" aria-labelledby="bombResultTitle" aria-describedby="bombResultMessage">
+      <div class="bomb-result-icon" id="bombResultIcon" aria-hidden="true"></div>
+      <p class="eyebrow" id="bombResultKicker">BOMB DEFUSED</p>
+      <h2 id="bombResultTitle">拆弹成功！</h2>
+      <p id="bombResultMessage">你找到了正确的密码。</p>
+      <div class="bomb-result-stats">
+        <div><span>密码</span><strong id="bombResultTarget">--</strong></div>
+        <div><span>猜测次数</span><strong id="bombResultGuesses">0</strong></div>
+        <div><span>剩余线路</span><strong id="bombResultTime">7 / 7</strong></div>
+      </div>
+      <button class="bomb-result-action" id="bombResultAction" type="button">再拆一颗</button>
+    </div>
+  </div>
+
+  <dialog class="oracle-drawer" id="oracleDialog" aria-labelledby="oracleTitle" aria-describedby="oracleSubtitle">
+    <div class="oracle-sheet">
+      <header class="oracle-head">
+        <div class="oracle-head-copy">
+          <p class="eyebrow">ROLE REVERSAL · YOU SET THE SECRET</p>
+          <h2 id="oracleTitle">角色反转 · 你当出题人</h2>
+          <p class="oracle-subtitle" id="oracleSubtitle">你设定 1–100 的 secret，电脑只用 <code>BinaryEngine.nextMid(low, high)</code> 取中点来猜，不会读取 secret。你来当裁判，回答：太大、太小或命中。</p>
+        </div>
+        <div class="oracle-head-side">
+          <span class="oracle-mastery" id="oracleMastery" data-state="idle">本地记录 · 未开始</span>
+          <button class="oracle-close" id="oracleCloseBtn" type="button" aria-label="关闭角色反转">
+            <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="m4 4 8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <div class="oracle-scroll">
+        <section class="oracle-setup" aria-labelledby="oracleSetupTitle">
+          <div class="oracle-section-head">
+            <span class="oracle-step">STEP 1 · SECRET</span>
+            <h3 id="oracleSetupTitle">设定秘密数字</h3>
+            <span class="oracle-section-note">1–100 · 输入或滑杆</span>
+          </div>
+          <div class="oracle-secret-row">
+            <label class="oracle-secret-label" for="oracleSecretInput">secret</label>
+            <input class="oracle-secret-input" id="oracleSecretInput" type="number" inputmode="numeric" min="1" max="100" step="1" value="62" autocomplete="off" />
+            <input class="oracle-secret-range" id="oracleSecretRange" type="range" min="1" max="100" step="1" value="62" aria-label="用滑杆选择秘密数字" />
+            <button class="oracle-start" id="oracleStartBtn" type="button">开始</button>
+          </div>
+          <p class="oracle-error" id="oracleSecretError" role="alert" hidden></p>
+        </section>
+
+        <section class="oracle-play" id="oraclePlaySection" aria-labelledby="oraclePlayTitle">
+          <div class="oracle-section-head">
+            <span class="oracle-step">STEP 2 · REFEREE</span>
+            <h3 id="oraclePlayTitle">电脑来猜，你当裁判</h3>
+            <span class="oracle-round" id="oracleRoundBadge">等待开始</span>
+          </div>
+
+          <div class="oracle-guess-stage" id="oracleGuessStage" data-state="ready">
+            <div class="oracle-guess-meta">
+              <span class="oracle-range" id="oracleRangeBadge">区间 [1, 100]</span>
+              <span class="oracle-consistency" id="oracleConsistency" data-tone="idle">等待开始</span>
+            </div>
+            <strong class="oracle-guess-value" id="oracleGuessValue">—</strong>
+            <code class="oracle-guess-formula" id="oracleGuessFormula">电脑将在开始后取中点</code>
+            <div class="oracle-answers" id="oracleAnswers">
+              <button class="oracle-answer oracle-answer--high" id="oracleAnswerHigh" type="button" disabled>
+                太大
+                <small>secret 更小</small>
+              </button>
+              <button class="oracle-answer oracle-answer--hit" id="oracleAnswerHit" type="button" disabled>
+                命中
+                <small>就是它</small>
+              </button>
+              <button class="oracle-answer oracle-answer--low" id="oracleAnswerLow" type="button" disabled>
+                太小
+                <small>secret 更大</small>
+              </button>
+            </div>
+            <p class="oracle-hint" id="oraclePlayHint" role="status" aria-live="polite">先设定 secret，再点「开始」。电脑第一次会猜 50。</p>
+          </div>
+
+          <p class="oracle-consistency-note" id="oracleConsistencyNote" data-tone="warn" role="status" aria-live="polite" hidden></p>
+
+          <div class="oracle-history-wrap">
+            <div class="oracle-history-head">
+              <span>回答历史</span>
+              <span id="oracleHistoryCount">0 次</span>
+            </div>
+            <ol class="oracle-history" id="oracleHistory">
+              <li class="oracle-history-empty">还没有回答。</li>
+            </ol>
+          </div>
+        </section>
+
+        <section class="oracle-end" id="oracleEndSection" aria-labelledby="oracleEndTitle" tabindex="-1" hidden>
+          <div class="oracle-section-head">
+            <span class="oracle-step">STEP 3 · PATH TREE</span>
+            <h3 id="oracleEndTitle">路径决策树</h3>
+            <span class="oracle-tree-meta" id="oracleTreeMeta">共 0 层 · 最坏 7 次</span>
+          </div>
+
+          <p class="oracle-end-text" id="oracleEndText"></p>
+
+          <div class="oracle-end-stats">
+            <div><span>猜测次数</span><strong id="oracleEndGuesses">0</strong></div>
+            <div><span>路径层数</span><strong id="oracleEndLayers">0</strong></div>
+            <div><span>一致性</span><strong id="oracleEndConsistency">一致</strong></div>
+            <div><span>最坏预算</span><strong>7</strong></div>
+          </div>
+
+          <p class="oracle-tree-legend">
+            <span class="oracle-legend-dot is-path" aria-hidden="true"></span>实际路径
+            <span class="oracle-legend-dot is-ghost" aria-hidden="true"></span>未走分支（轮廓）
+            <span class="oracle-tree-budget">⌈log₂100⌉ = 7</span>
+          </p>
+
+          <ol class="oracle-tree" id="oracleTree" aria-label="本次猜测的路径决策树"></ol>
+
+          <div class="oracle-quiz" id="oracleQuiz">
+            <p class="oracle-quiz-kicker">CHECK · 2 题小测</p>
+            <p class="oracle-quiz-note">两题都答对后，写入 <code>ProgressStore.recordLevel('binary', 'oracle', …)</code>。</p>
+            <div class="oracle-quiz-block">
+              <p class="oracle-quiz-prompt">1. 为什么 1–100 最坏只需要 7 次？</p>
+              <div class="oracle-quiz-options" id="oracleQuizQ1" data-oracle-quiz="q1"></div>
+              <p class="oracle-quiz-feedback" id="oracleQuizQ1Feedback" data-tone="neutral" role="status" aria-live="polite">选一个最接近的答案。</p>
+            </div>
+            <div class="oracle-quiz-block">
+              <p class="oracle-quiz-prompt">2. 如果裁判说谎，二分还能保证找到吗？</p>
+              <div class="oracle-quiz-options" id="oracleQuizQ2" data-oracle-quiz="q2"></div>
+              <p class="oracle-quiz-feedback" id="oracleQuizQ2Feedback" data-tone="neutral" role="status" aria-live="polite">选一个最接近的答案。</p>
+            </div>
+            <p class="oracle-quiz-result" id="oracleQuizResult" data-tone="neutral" role="status" aria-live="polite" hidden></p>
+          </div>
+        </section>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="switch-dialog" id="switchDialog" aria-labelledby="switchTitle" aria-describedby="switchMessage">
+    <div class="switch-dialog-card">
+      <div class="switch-warning-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none">
+          <circle cx="11" cy="13" r="6.4" stroke="currentColor" stroke-width="1.8" />
+          <path d="M15.4 8.3c.7-1.3 1.9-2.1 3.2-2.3M17.2 9.9l2.8-1.7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+          <circle cx="21.1" cy="6.8" r="1.7" fill="currentColor" />
+        </svg>
+      </div>
+      <p class="eyebrow">NAVIGATION WARNING</p>
+      <h2 id="switchTitle">要引爆炸弹吗？</h2>
+      <p id="switchMessage">这一局还没有结束。确认后炸弹会立刻引爆，然后切换到新的算法游戏。</p>
+      <div class="switch-actions">
+        <button class="switch-cancel" id="switchCancel" type="button">继续拆弹</button>
+        <button class="switch-confirm" id="switchConfirm" type="button">引爆并切换</button>
+      </div>
+    </div>
+  </dialog>
+
+  <div class="screen-flash" id="screenFlash" aria-hidden="true"></div>
+  <div class="bomb-toast" id="bombToast" role="status" aria-live="polite" hidden></div>
+
+  <template id="binaryDocsAnalysis">
+    <div class="formula-card">
+      <span class="formula-eyebrow">每一次取中点</span>
+      <div class="formula formula--compact">mid <span>=</span> low <span>+</span> ⌊(high − low) / 2⌋</div>
+      <div class="formula-parts">
+        <span><b>low / high</b> 当前候选区间的左右边界</span>
+        <span><b>mid</b> 下一次最优猜测，也是先预测、后验证的目标</span>
+      </div>
+    </div>
+
+    <section class="analysis-section">
+      <p class="analysis-kicker">HOW IT WORKS</p>
+      <h3>五步理解这个学习闭环</h3>
+      <ol class="step-list">
+        <li>
+          <strong>初始化候选区间</strong>
+          <p>从 <code>low = 1</code>、<code>high = 100</code> 开始，同时拿到 7 根拆弹线。未验证的密码一定在这个区间里。</p>
+        </li>
+        <li>
+          <strong>先预测下一次 mid</strong>
+          <p>用公式 <code>mid = low + floor((high − low) / 2)</code> 自己算一遍，再验证。预测不替代猜测，只是一次学习检查。</p>
+        </li>
+        <li>
+          <strong>提交猜测并读取反馈</strong>
+          <p>猜小了就把 <code>low</code> 移到 <code>mid + 1</code>；猜大了就把 <code>high</code> 移到 <code>mid − 1</code>。状态面板和历史表会同步显示新区间与剩余候选。</p>
+        </li>
+        <li>
+          <strong>为猜测付出线材</strong>
+          <p>每次合法猜测都会占用一根线；猜错就会剪断它。7 根线耗尽，炸弹爆炸；但若在最后一根线上命中，仍然算拆弹成功。</p>
+        </li>
+        <li>
+          <strong>重复直到命中</strong>
+          <p>正常情况下密码始终留在区间内，所以 low 不会越过 high。按中点策略，最坏情况 ⌈log₂100⌉ = 7 次比较即可命中。</p>
+        </li>
+      </ol>
+    </section>
+
+    <section class="analysis-section">
+      <p class="analysis-kicker">COMPLEXITY</p>
+      <h3>复杂度</h3>
+      <div class="complexity-grid">
+        <div>
+          <span>最坏时间</span>
+          <strong>O(log n)</strong>
+          <small>n = 100 时最多 7 次</small>
+        </div>
+        <div>
+          <span>额外空间</span>
+          <strong>O(1)</strong>
+          <small>只维护 low / high</small>
+        </div>
+      </div>
+      <p class="analysis-copy">每轮候选数量至少减半：100 → 50 → 25 → 12 → 6 → 3 → 1，因此最多只需要 7 次比较。本页的 7 根线正好对应这个最坏情况预算。</p>
+    </section>
+
+    <section class="analysis-section">
+      <p class="analysis-kicker">WHY IT WORKS</p>
+      <h3>为什么一定不会漏掉答案</h3>
+      <p class="analysis-copy">二分查找的核心是循环不变量：<code>secret ∈ [low, high]</code> 始终成立。比较后只删除确定不可能是答案的一侧，因此无论向左还是向右收缩，正确数字都还会留在新区间里。</p>
+      <p class="analysis-copy">实现时推荐 <code>low + (high - low) / 2</code> 而不是 <code>(low + high) / 2</code>，避免非常大的范围下整数相加溢出。Python 的 <code>//</code> 和 Go/C++/Java 的整数除法都会自动向下取整。</p>
+    </section>
+
+    <section class="analysis-section analysis-section--visual">
+      <p class="analysis-kicker">ON SCREEN</p>
+      <h3>和本页可视化对照</h3>
+      <ul class="visual-notes">
+        <li><i class="visual-swatch visual-swatch--warm"></i><span><b>区间状态</b>：low / high / mid 与剩余候选实时更新。</span></li>
+        <li><i class="visual-swatch visual-swatch--muted"></i><span><b>猜测历史</b>：每步记录反馈、新区间和本次排除数量。</span></li>
+        <li><i class="visual-swatch visual-swatch--guess"></i><span><b>预测检查</b>：先算下一次 mid，再提交猜测验证。</span></li>
+        <li><i class="visual-swatch visual-swatch--target"></i><span><b>7 根线</b>：每次合法猜测消耗一根；命中即拆弹成功。</span></li>
+      </ul>
+    </section>
+  </template>
+
+  <div class="sr-only" id="liveRegion" aria-live="polite" aria-atomic="true"></div>
+
+  <script src="../../shared/shell.js" defer></script>
+  <script src="../../shared/docs-viewer.js" defer></script>
+  <script src="binary-search-docs.js" defer></script>
+  <script src="../../shared/progress.js" defer></script>
+  <script src="../../shared/trace.js" defer></script>
+  <script src="binary-engine.js" defer></script>
+  <script src="binary-search.js" defer></script>
+</body>
+</html>

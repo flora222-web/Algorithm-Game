@@ -132,6 +132,17 @@
     oracleQuizQ2Feedback: document.getElementById('oracleQuizQ2Feedback'),
     oracleQuizResult: document.getElementById('oracleQuizResult'),
 
+    playBackLink: document.getElementById('playBackLink'),
+    playModeKicker: document.getElementById('playModeKicker'),
+    levelTitle: document.getElementById('levelTitle'),
+    levelCompletion: document.getElementById('levelCompletion'),
+    levelCompletionTitle: document.getElementById('levelCompletionTitle'),
+    levelCompletionText: document.getElementById('levelCompletionText'),
+    levelQuizJump: document.getElementById('levelQuizJump'),
+    levelNextLink: document.getElementById('levelNextLink'),
+    levelCompletionBack: document.getElementById('levelCompletionBack'),
+    exampleQuizOptions: document.getElementById('exampleQuizOptions'),
+    exampleQuizFeedback: document.getElementById('exampleQuizFeedback'),
     levelTabs: document.getElementById('levelTabs'),
     levelMastery: document.getElementById('levelMastery'),
     levelGoal: document.getElementById('levelGoal'),
@@ -280,8 +291,19 @@
   const UPPER_BOUND = ENGINE.UPPER_BOUND;
   const MAX_WIRES = ENGINE.MAX_WIRES || 7;
   const LEVEL_IDS = ['example', 'midpoint', 'invariant', 'boundary', 'duplicates', 'threshold'];
+  const LEVEL_BOMB_IDS = ['example', 'midpoint', 'invariant'];
+  const LEVEL_NEXT = {
+    example: 'midpoint',
+    midpoint: 'invariant',
+    invariant: 'boundary',
+    boundary: 'duplicates',
+    duplicates: 'threshold',
+    threshold: null
+  };
+  const LEVEL_FIXED_SECRET = { example: 62, midpoint: 37, invariant: 74 };
   const DUPLICATE_VALUES = [1, 2, 2, 2, 4, 5, 5, 7, 9];
   const THRESHOLD_CONFIG = { low: 1, high: 100, threshold: 60 };
+  const PLAY = parsePlayRoute();
 
   const LEVEL_META = {
     example: {
@@ -290,25 +312,43 @@
     },
     midpoint: {
       name: '7 根线',
-      goal: '目标：用 7 根线拆弹成功即通过；再答对「最坏为什么是 7 次」点亮掌握徽章。'
+      goal: '目标：固定 secret = 37，用 7 根线拆弹成功即通过；再答对「最坏为什么是 7 次」点亮掌握徽章。'
     },
     invariant: {
       name: '区间不变量',
-      goal: '目标：每次猜错后写出新的 [low, high]。连续 3 次正确获得小测徽章；本局结束即通过。'
+      goal: '目标：固定 secret = 74，每次猜错后写出新的 [low, high]；连续 3 次正确完成小测，本局结束即通过。'
     },
     boundary: {
       name: '死循环排查',
-      goal: '目标：运行 low = mid 的 buggy 二分，找到重复区间 [50, 51]，并指出错误的那一行。'
+      goal: '目标：运行 secret = 51 的 low = mid 二分，复现 [50, 51] 死循环，并指出错误的那一行。'
     },
     duplicates: {
       name: '重复元素',
-      goal: '目标：在重复数组里找第一个或最后一个目标值；一步步观察区间怎样收缩，结束时再揭晓它的正式名字。'
+      goal: '目标：在固定重复数组里，用目标 2 找第一个位置；走完演示后答对小测。'
     },
     threshold: {
       name: '最小电量',
-      goal: '目标：只靠“容量 x 能撑过 8 小时吗”的是/否回答，找出最小可用容量；结束时再揭晓这类题的名字。'
+      goal: '目标：容量固定 1–100，只靠“容量 x 能撑过 8 小时吗”的是/否回答，找出最小可用容量。'
     }
   };
+
+  const EXAMPLE_QUIZ = [
+    {
+      text: '50。mid = 1 + floor((100 − 1) / 2) = 50。',
+      correct: true,
+      explain: 'mid 由当前区间 [low, high] 决定，与 secret 本身无关。'
+    },
+    {
+      text: '62。secret 是 62，所以第一次直接猜 62。',
+      correct: false,
+      hint: 'mid 由区间中点决定，猜谜时并不知道 secret。'
+    },
+    {
+      text: '51。中点总是区间中间偏右的那个数。',
+      correct: false,
+      hint: '公式向下取整：1–100 的第一次中点是 50。'
+    }
+  ];
 
   const MIDPOINT_QUIZ = [
     {
@@ -443,14 +483,21 @@
     resetPredictionForRound();
     renderAll();
     refreshProgress();
-    setRailTab('data');
+    applyPlayRoute();
   }
 
   function bindEvents() {
-    dom.startBombBtn.addEventListener('click', startRound);
-    dom.startBombBtnInline.addEventListener('click', startRound);
+    dom.startBombBtn.addEventListener('click', handleStartBombClick);
+    dom.startBombBtnInline.addEventListener('click', handleStartBombClick);
     dom.guessForm.addEventListener('submit', submitGuess);
     dom.predictForm.addEventListener('submit', submitPrediction);
+
+    if (dom.exampleQuizOptions) {
+      dom.exampleQuizOptions.addEventListener('click', (event) => handleLevelQuizClick('example', event));
+    }
+    if (dom.levelQuizJump) {
+      dom.levelQuizJump.addEventListener('click', jumpToLevelQuiz);
+    }
 
     dom.guessInput.addEventListener('input', () => {
       dom.guessForm.classList.remove('is-shaking');
@@ -616,10 +663,98 @@
   }
 
   // =========================================================
+  // 路由 · 算法首页 → 固定关卡 / 自由探索
+  // =========================================================
+
+  function parsePlayRoute() {
+    let params = null;
+
+    try {
+      params = new URLSearchParams(window.location.search);
+    } catch {
+      params = null;
+    }
+
+    const requestedLevel = params ? params.get('level') : null;
+    const levelId = LEVEL_IDS.indexOf(requestedLevel) >= 0 ? requestedLevel : null;
+    const mode = params ? params.get('mode') : null;
+
+    return {
+      mode: levelId ? 'level' : 'custom',
+      levelId,
+      oracle: !levelId && mode === 'oracle',
+      docs: Boolean(params && params.get('docs') === '1')
+    };
+  }
+
+  function applyPlayRoute() {
+    const isLevel = PLAY.mode === 'level';
+    document.body.dataset.playMode = PLAY.mode;
+
+    if (isLevel) {
+      document.body.dataset.level = PLAY.levelId;
+    } else {
+      delete document.body.dataset.level;
+    }
+
+    if (dom.levelTabs) {
+      dom.levelTabs.hidden = true;
+      dom.levelTabs.setAttribute('aria-hidden', 'true');
+    }
+
+    if (dom.playBackLink) {
+      dom.playBackLink.hidden = false;
+      dom.playBackLink.textContent = isLevel ? '← 关卡选择' : '← 二分首页';
+      dom.playBackLink.href = 'index.html';
+    }
+
+    if (isLevel) {
+      setActiveLevel(PLAY.levelId);
+      if (PLAY.levelId === 'duplicates') lockDuplicatesLevel();
+      setRailTab('level');
+      announce(`已进入「${LEVEL_META[PLAY.levelId].name}」关卡。`);
+    } else {
+      setRailTab('data');
+      announce('已进入自由探索。随机 secret，随时开始拆弹。');
+    }
+
+    renderLevels();
+    updateControls();
+    refreshProgress();
+
+    if (PLAY.oracle) {
+      window.setTimeout(() => openOracleDialog(), 80);
+    }
+
+    if (PLAY.docs) {
+      window.setTimeout(() => {
+        if (ui.docsViewer && !ui.docsViewer.isOpen()) ui.docsViewer.open();
+      }, 140);
+    }
+  }
+
+  function lockDuplicatesLevel() {
+    const view = ui.levels.duplicates;
+    view.target = 2;
+    view.mode = 'first';
+
+    [dom.duplicatesTargetGroup, dom.duplicatesModeGroup].forEach((group) => {
+      if (!group) return;
+      group.querySelectorAll('button').forEach((button) => {
+        button.disabled = true;
+        button.setAttribute('aria-disabled', 'true');
+      });
+    });
+
+    resetDuplicatesWalkthrough();
+  }
+
+  // =========================================================
   // 关卡 · 掌握徽章
   // =========================================================
 
   function buildLevelQuizOptions() {
+    fillQuizOptions(dom.exampleQuizOptions, EXAMPLE_QUIZ);
     fillQuizOptions(dom.midpointQuizOptions, MIDPOINT_QUIZ);
     fillQuizOptions(dom.boundaryQuizOptions, BOUNDARY_QUIZ);
     fillQuizOptions(dom.duplicatesQuizOptions, DUPLICATES_QUIZ);
@@ -1033,9 +1168,16 @@
     const config = getQuizConfig(levelId);
     if (!config || !config.container || !config.container.contains(button)) return;
 
+    const flags = mergeLevelFlags(levelId);
+
+    if (PLAY.mode === 'level' && !flags.passed && !flags.quizCorrect) {
+      setQuizFeedback(levelId, 'neutral', '先完成本关目标，再解锁小测。');
+      return;
+    }
+
     if ((levelId === 'duplicates' || levelId === 'threshold')
       && getWalkthroughStatus(levelId) !== 'done'
-      && !mergeLevelFlags(levelId).quizCorrect) {
+      && !flags.quizCorrect) {
       setQuizFeedback(levelId, 'neutral', '先走完一遍演示，再作答。');
       return;
     }
@@ -1062,6 +1204,7 @@
 
   function getQuizConfig(levelId) {
     const configs = {
+      example: { container: dom.exampleQuizOptions, options: EXAMPLE_QUIZ, feedback: dom.exampleQuizFeedback },
       midpoint: { container: dom.midpointQuizOptions, options: MIDPOINT_QUIZ, feedback: dom.midpointQuizFeedback },
       boundary: { container: dom.boundaryQuizOptions, options: BOUNDARY_QUIZ, feedback: dom.boundaryQuizFeedback },
       duplicates: { container: dom.duplicatesQuizOptions, options: DUPLICATES_QUIZ, feedback: dom.duplicatesQuizFeedback },
@@ -1079,7 +1222,7 @@
   }
 
   function syncQuizSolvedState() {
-    LEVEL_IDS.filter((levelId) => levelId !== 'example').forEach((levelId) => {
+    LEVEL_IDS.forEach((levelId) => {
       const config = getQuizConfig(levelId);
       if (!config || !config.container) return;
       const solved = mergeLevelFlags(levelId).quizCorrect;
@@ -1095,6 +1238,46 @@
         setQuizFeedback(levelId, 'correct', '✓ 小测已通过，记录已保存在本地。');
       }
     });
+  }
+
+  function isQuizLocked(levelId) {
+    const flags = mergeLevelFlags(levelId);
+    if (flags.quizCorrect) return false;
+    if (PLAY.mode === 'level' && !flags.passed) return true;
+    return (levelId === 'duplicates' || levelId === 'threshold')
+      && getWalkthroughStatus(levelId) !== 'done';
+  }
+
+  function syncQuizGate(levelId) {
+    const config = getQuizConfig(levelId);
+    if (!config || !config.container) return;
+
+    const flags = mergeLevelFlags(levelId);
+    if (flags.quizCorrect) {
+      config.container.classList.remove('is-locked');
+      return;
+    }
+
+    const locked = isQuizLocked(levelId);
+    config.container.classList.toggle('is-locked', locked);
+    config.container.querySelectorAll('.quiz-option').forEach((button) => {
+      button.disabled = locked;
+    });
+
+    const wasLocked = config.container.dataset.locked === 'true';
+    config.container.dataset.locked = String(locked);
+
+    if (locked !== wasLocked) {
+      if (locked) {
+        setQuizFeedback(levelId, 'neutral', '先完成本关目标，再解锁小测。');
+      } else if (flags.passed) {
+        setQuizFeedback(levelId, 'neutral', '目标完成，可以作答了。');
+      }
+    }
+  }
+
+  function syncQuizGates() {
+    LEVEL_IDS.forEach((levelId) => syncQuizGate(levelId));
   }
 
   function readLevelRecord(levelId) {
@@ -1116,7 +1299,7 @@
   }
 
   function isLevelMastered(levelId, flags) {
-    return flags.passed && (levelId === 'example' || flags.quizCorrect);
+    return Boolean(flags.passed && flags.quizCorrect);
   }
 
   function recordLevelResult(levelId, patch = {}) {
@@ -1177,19 +1360,32 @@
       }
     });
 
-    dom.levelGoal.textContent = LEVEL_META[active].goal;
+    const levelNumber = String(LEVEL_IDS.indexOf(active) + 1).padStart(2, '0');
+
+    if (PLAY.mode === 'level') {
+      if (dom.playModeKicker) dom.playModeKicker.textContent = `LEVEL ${levelNumber} · ${active.toUpperCase()}`;
+      if (dom.levelTitle) dom.levelTitle.textContent = `关卡 ${levelNumber} · ${LEVEL_META[active].name}`;
+      dom.levelGoal.textContent = LEVEL_META[active].goal;
+    } else {
+      if (dom.playModeKicker) {
+        dom.playModeKicker.textContent = PLAY.oracle ? 'ROLE REVERSAL · YOU SET THE SECRET' : 'CUSTOM · FREE PLAY';
+      }
+      if (dom.levelTitle) dom.levelTitle.textContent = PLAY.oracle ? '角色反转 · 你当出题人' : '自由探索 · 完整驾驶舱';
+      dom.levelGoal.textContent = '随机 secret，自由练习预测、拆弹与历史复盘；随时打开角色反转或源码解析。';
+    }
+
     dom.levelMastery.textContent = `${masteredCount} / ${LEVEL_IDS.length} 掌握`;
     dom.levelMastery.title = `已掌握 ${masteredCount} / ${LEVEL_IDS.length} 个关卡`;
 
     const activeFlags = mergeLevelFlags(active);
     const activeMastered = isLevelMastered(active, activeFlags);
 
-    dom.levelStatus.textContent = activeMastered ? '已掌握' : activeFlags.passed ? '已通过' : '未通过';
+    dom.levelStatus.textContent = activeMastered ? '已掌握' : activeFlags.passed ? '待小测' : '未通过';
     dom.levelStatus.dataset.tone = activeMastered ? 'mastered' : activeFlags.passed ? 'passed' : 'neutral';
 
     if (active === 'example') {
-      dom.levelQuizStatus.textContent = activeFlags.passed ? '演示完成' : '完成演示即可';
-      dom.levelQuizStatus.dataset.tone = activeFlags.passed ? 'passed' : 'neutral';
+      dom.levelQuizStatus.textContent = activeFlags.quizCorrect ? '小测 ✓' : activeFlags.passed ? '小测待完成' : '完成演示即可';
+      dom.levelQuizStatus.dataset.tone = activeFlags.quizCorrect ? 'passed' : 'neutral';
     } else {
       dom.levelQuizStatus.textContent = activeFlags.quizCorrect ? '小测 ✓' : '小测待完成';
       dom.levelQuizStatus.dataset.tone = activeFlags.quizCorrect ? 'passed' : 'neutral';
@@ -1205,7 +1401,84 @@
     renderDuplicatesPanel();
     renderThresholdPanel();
     syncQuizSolvedState();
+    syncQuizGates();
     updateLevelActions();
+    renderLevelCompletion();
+  }
+
+  function renderLevelCompletion() {
+    if (!dom.levelCompletion) return;
+
+    if (PLAY.mode !== 'level') {
+      dom.levelCompletion.hidden = true;
+      return;
+    }
+
+    const levelId = PLAY.levelId || ui.levels.active;
+    const flags = mergeLevelFlags(levelId);
+    const mastered = isLevelMastered(levelId, flags);
+    const visible = flags.passed || flags.quizCorrect;
+
+    dom.levelCompletion.hidden = !visible;
+    if (!visible) return;
+
+    dom.levelCompletion.dataset.state = mastered ? 'mastered' : flags.passed ? 'passed' : 'quiz';
+
+    if (mastered) {
+      const nextId = LEVEL_NEXT[levelId];
+      dom.levelCompletionTitle.textContent = '已掌握';
+      dom.levelCompletionText.textContent = `《${LEVEL_META[levelId].name}》已完成，进度已保存。`;
+      dom.levelQuizJump.hidden = true;
+      dom.levelNextLink.hidden = false;
+      dom.levelNextLink.href = nextId ? `play.html?level=${nextId}` : 'index.html';
+      dom.levelNextLink.textContent = nextId ? '已掌握 · 下一关 →' : '已掌握 · 返回关卡选择 →';
+      dom.levelCompletionBack.hidden = false;
+    } else if (flags.passed) {
+      dom.levelCompletionTitle.textContent = '目标完成';
+      dom.levelCompletionText.textContent = levelId === 'invariant'
+        ? '目标已保存；再完成 3 次区间校验，点亮掌握徽章。'
+        : '去答关卡内小测，点亮掌握徽章。';
+      dom.levelQuizJump.hidden = false;
+      dom.levelQuizJump.textContent = '目标完成 · 去答小测';
+      dom.levelNextLink.hidden = true;
+      dom.levelCompletionBack.hidden = false;
+    } else {
+      dom.levelCompletionTitle.textContent = '小测通过';
+      dom.levelCompletionText.textContent = '完成本关目标后即可进入下一关。';
+      dom.levelQuizJump.hidden = true;
+      dom.levelNextLink.hidden = true;
+      dom.levelCompletionBack.hidden = false;
+    }
+  }
+
+  function jumpToLevelQuiz() {
+    const levelId = PLAY.mode === 'level' ? PLAY.levelId : ui.levels.active;
+    let target = null;
+
+    if (levelId === 'invariant') {
+      target = dom.invariantHint;
+    } else {
+      const config = getQuizConfig(levelId);
+      target = config && config.container;
+    }
+
+    setRailTab('level');
+
+    if (!target) return;
+
+    window.requestAnimationFrame(() => {
+      target.scrollIntoView({
+        behavior: reduceMotion ? 'auto' : 'smooth',
+        block: 'center'
+      });
+
+      const focusTarget = levelId === 'invariant'
+        ? dom.invariantStart
+        : target.querySelector('.quiz-option:not(:disabled)');
+      if (focusTarget && typeof focusTarget.focus === 'function') {
+        focusTarget.focus({ preventScroll: true });
+      }
+    });
   }
 
   function renderInvariantPanel() {
@@ -1250,6 +1523,7 @@
     const targetButton = event.target.closest('[data-bound-target]');
     const modeButton = event.target.closest('[data-bound-mode]');
     if (!targetButton && !modeButton) return;
+    if (PLAY.mode === 'level' && PLAY.levelId === 'duplicates') return;
 
     const view = ui.levels.duplicates;
     if (targetButton) view.target = Number(targetButton.dataset.boundTarget);
@@ -1701,13 +1975,7 @@
   }
 
   function syncWalkthroughQuizGate(levelId, done) {
-    const config = getQuizConfig(levelId);
-    if (!config || !config.container) return;
-    if (mergeLevelFlags(levelId).quizCorrect) return;
-
-    config.container.querySelectorAll('.quiz-option').forEach((button) => {
-      button.disabled = !done;
-    });
+    syncQuizGate(levelId);
   }
 
   function updateLevelActions() {
@@ -1734,9 +2002,9 @@
       ui.levels.invariant.promptOpen = false;
       ui.levels.invariant.answered = false;
 
-      if (state.status === 'defused') {
+      if (state.status === 'defused' && ui.levels.active === 'midpoint') {
         recordLevelResult('midpoint', { passed: true });
-        if (ui.levels.active === 'midpoint' && !mergeLevelFlags('midpoint').quizCorrect) {
+        if (!mergeLevelFlags('midpoint').quizCorrect) {
           setQuizFeedback('midpoint', 'correct', '拆弹成功！再答对小测即可点亮掌握徽章。');
         }
       }
@@ -1758,9 +2026,25 @@
   // 回合流程
   // =========================================================
 
+  function getActiveFixedSecret() {
+    if (PLAY.mode !== 'level') return null;
+    const secret = LEVEL_FIXED_SECRET[PLAY.levelId];
+    return Number.isInteger(secret) ? secret : null;
+  }
+
+  function handleStartBombClick() {
+    if (PLAY.mode === 'level' && ui.levels.active === 'example') {
+      startExampleDemo();
+      return;
+    }
+
+    startRound();
+  }
+
   function startRound(options) {
     const demoMode = Boolean(options && options.demo === true);
     const requestedSecret = options && Number.isInteger(options.secret) ? options.secret : null;
+    const configuredSecret = requestedSecret === null ? getActiveFixedSecret() : requestedSecret;
 
     if (!demoMode && ui.game && ui.game.status === 'playing' && !ui.navigationPending && !ui.demo.active) return;
 
@@ -1772,8 +2056,8 @@
       dom.switchDialog.close('restart');
     }
 
-    let nextState = ENGINE.createState(requestedSecret === null ? undefined : requestedSecret);
-    if (!demoMode) {
+    let nextState = ENGINE.createState(configuredSecret === null ? undefined : configuredSecret);
+    if (!demoMode && configuredSecret === null) {
       let retry = 0;
       while (ui.game && nextState.secret === ui.game.secret && retry < 3) {
         nextState = ENGINE.createState();
@@ -2275,26 +2559,51 @@
     const locked = playing || ui.resultOpen || ui.resultPending || ui.navigationPending;
     const canInput = playing && !blocked && !demoPlaying;
 
-    dom.startBombBtn.disabled = ui.navigationPending || (locked && !demoPlaying);
+    const levelMode = PLAY.mode === 'level';
+    const activeLevel = ui.levels.active;
+    const demoLevel = levelMode && activeLevel === 'example';
+    const bombLevel = !levelMode || LEVEL_BOMB_IDS.indexOf(activeLevel) !== -1;
+    const fixedSecret = getActiveFixedSecret();
+
+    dom.startBombBtn.disabled = !bombLevel
+      || ui.navigationPending
+      || (demoLevel && demoPlaying)
+      || (locked && !demoPlaying);
     dom.guessInput.disabled = !canInput;
     dom.guessSubmit.disabled = !canInput;
 
-    if (ui.navigationPending) {
-      dom.startBombLabel.textContent = '正在切换…';
+    let startLabel;
+
+    if (!bombLevel) {
+      startLabel = '请使用关卡面板';
+    } else if (ui.navigationPending) {
+      startLabel = '正在切换…';
+    } else if (demoLevel) {
+      startLabel = playing
+        ? '演示进行中…'
+        : ui.demo.done ? '重新演示 · secret 62' : '开始演示 · secret 62';
     } else if (playing) {
-      dom.startBombLabel.textContent = demoPlaying ? '结束演示并开局' : '拆弹中…';
+      startLabel = demoPlaying ? '结束演示并开局' : '拆弹中…';
     } else if (ui.resultOpen || ui.resultPending) {
-      dom.startBombLabel.textContent = '本局结束';
+      startLabel = '本局结束';
     } else if (!ui.game) {
-      dom.startBombLabel.textContent = '开始拆弹';
+      startLabel = fixedSecret === null ? '开始拆弹' : `开始拆弹 · secret ${fixedSecret}`;
     } else {
-      dom.startBombLabel.textContent = '再拆一颗';
+      startLabel = '再拆一颗';
     }
 
-    const showInlineStart = !playing && !ui.resultOpen && !ui.resultPending && !ui.navigationPending;
+    dom.startBombLabel.textContent = startLabel;
+
+    const showInlineStart = bombLevel
+      && !playing
+      && !ui.resultOpen
+      && !ui.resultPending
+      && !ui.navigationPending;
     dom.inlineStartRow.hidden = !showInlineStart;
-    dom.startBombBtnInline.disabled = locked;
-    dom.startBombLabelInline.textContent = !ui.game ? '开始拆弹' : '再拆一颗';
+    dom.startBombBtnInline.disabled = !bombLevel || locked || (demoLevel && demoPlaying);
+    dom.startBombLabelInline.textContent = startLabel === '请使用关卡面板'
+      ? startLabel
+      : !ui.game ? startLabel : '再拆一颗';
 
     const wires = ui.game ? ui.game.wiresLeft : MAX_WIRES;
     dom.guessWireNote.textContent = `拆弹线 ${wires} / ${MAX_WIRES}`;
