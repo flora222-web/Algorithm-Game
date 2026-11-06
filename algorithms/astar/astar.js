@@ -4,7 +4,7 @@
  * 寻路实验室 · A* UI 层
  * ------------------------------------------------------------
  * 纯算法、事件流和随机地图都由 window.AStarEngine 提供；
- * 本文件只负责地图编辑、事件级回放、语义/彩虹绘制、预测、算法对比与关卡展示。
+ * 本文件只负责地图编辑、事件级回放、语义绘制、预测、算法对比与关卡展示。
  */
 (() => {
   // =========================================================
@@ -21,17 +21,6 @@
     end: '点击地图上的任意格子，放置新的终点。',
     erase: '点击或拖拽格子，擦掉不需要的墙壁。'
   };
-
-  // 彩虹模式沿用原有探索顺序色板：紫色最早、粉色最晚
-  const RAINBOW_STOPS = [
-    [124, 91, 255],
-    [77, 156, 255],
-    [41, 211, 200],
-    [76, 210, 126],
-    [228, 212, 70],
-    [255, 158, 72],
-    [241, 83, 122]
-  ];
 
   const SEMANTIC_FROM = [77, 156, 255];
   const SEMANTIC_TO = [32, 190, 170];
@@ -216,11 +205,6 @@
     pauseIcon: document.getElementById('pauseIcon'),
     speedButtons: Array.from(document.querySelectorAll('.speed-btn')),
 
-    semanticViewBtn: document.getElementById('semanticViewBtn'),
-    rainbowViewBtn: document.getElementById('rainbowViewBtn'),
-    semanticLegend: document.getElementById('semanticLegend'),
-    rainbowLegend: document.getElementById('rainbowLegend'),
-
     resultOverlay: document.getElementById('resultOverlay'),
     resultCard: document.querySelector('.result-card'),
     resultIcon: document.getElementById('resultIcon'),
@@ -326,7 +310,6 @@
     start: { x: 3, y: 10 },
     end: { x: 16, y: 10 },
     tool: 'wall',
-    viewMode: 'semantic',
     heuristicWeight: 1,
     navStyleSelected: false,
 
@@ -544,9 +527,6 @@
       button.addEventListener('click', () => setSpeed(Number(button.dataset.speed)));
     });
 
-    dom.semanticViewBtn.addEventListener('click', () => setViewMode('semantic'));
-    dom.rainbowViewBtn.addEventListener('click', () => setViewMode('rainbow'));
-
     dom.predictionInput.addEventListener('input', () => {
       dom.predictionInput.classList.remove('is-invalid');
     });
@@ -602,8 +582,6 @@
       dom.stepBackBtn,
       dom.stepNextBtn,
       dom.playPauseBtn,
-      dom.semanticViewBtn,
-      dom.rainbowViewBtn,
       ...dom.railTabs,
       ...dom.navStyleButtons,
       dom.whyBtn,
@@ -1489,25 +1467,6 @@
     if (element && element.textContent !== text) {
       element.textContent = text;
     }
-  }
-
-  // =========================================================
-  // 视图模式
-  // =========================================================
-
-  function setViewMode(mode, { silent = false } = {}) {
-    state.viewMode = mode === 'rainbow' ? 'rainbow' : 'semantic';
-
-    const semantic = state.viewMode === 'semantic';
-    dom.semanticViewBtn.classList.toggle('is-active', semantic);
-    dom.rainbowViewBtn.classList.toggle('is-active', !semantic);
-    dom.semanticViewBtn.setAttribute('aria-pressed', String(semantic));
-    dom.rainbowViewBtn.setAttribute('aria-pressed', String(!semantic));
-    dom.semanticLegend.hidden = !semantic;
-    dom.rainbowLegend.hidden = semantic;
-    dom.playbackPanel.dataset.view = state.viewMode;
-
-    if (!silent) draw();
   }
 
   // =========================================================
@@ -3745,16 +3704,12 @@
     drawBoard(geometry);
 
     if (view) {
-      if (state.viewMode === 'rainbow') {
-        drawRainbowVisited(geometry, view);
-      } else {
-        drawSemanticVisited(geometry, view);
-      }
+      drawSemanticVisited(geometry, view);
     }
 
     drawWalls(geometry);
 
-    if (view && state.viewMode === 'semantic') {
+    if (view) {
       drawOpenSet(geometry, view);
     }
 
@@ -3828,30 +3783,6 @@
       context.save();
       context.fillStyle = `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${alpha})`;
       roundedRectPath(context, px + pad, py + pad, size, size, Math.max(2, geo.cell * 0.15));
-      context.fill();
-      context.restore();
-    }
-  }
-
-  function drawRainbowVisited(geo, view) {
-    if (view.closed.length === 0) return;
-
-    const total = Math.max(1, view.totalVisited - 1);
-
-    for (let i = 0; i < view.closed.length; i += 1) {
-      const point = fromKey(view.closed[i]);
-      const progress = view.totalVisited <= 1 ? 0 : i / total;
-      const color = rainbowColor(progress);
-
-      const px = geo.offsetX + point.x * geo.cell;
-      const py = geo.offsetY + point.y * geo.cell;
-      const pad = geo.cell * 0.1;
-      const size = geo.cell - pad * 2;
-
-      context.save();
-      context.globalAlpha = 0.92;
-      context.fillStyle = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
-      roundedRectPath(context, px + pad, py + pad, size, size, Math.max(2, geo.cell * 0.16));
       context.fill();
       context.restore();
     }
@@ -4271,11 +4202,4 @@
     ];
   }
 
-  function rainbowColor(progress) {
-    const normalized = clamp(progress, 0, 1);
-    const scaled = normalized * (RAINBOW_STOPS.length - 1);
-    const index = Math.min(RAINBOW_STOPS.length - 2, Math.floor(scaled));
-    const fraction = scaled - index;
-    return mixColor(RAINBOW_STOPS[index], RAINBOW_STOPS[index + 1], fraction);
-  }
 })();

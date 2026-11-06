@@ -2,19 +2,6 @@
    A* 寻路模块
    ========================================================= */
 
-:root {
-  --rainbow: linear-gradient(
-    90deg,
-    #7c5bff 0%,
-    #4d9cff 17%,
-    #29d3c8 34%,
-    #4cd27e 51%,
-    #e4d446 68%,
-    #ff9e48 84%,
-    #f1537a 100%
-  );
-}
-
 .status-pill[data-state="exploring"] {
   color: var(--primary-deep);
   border-color: #d5e4ff;
@@ -279,7 +266,7 @@
   display: block;
   width: 100%;
   height: 100%;
-  background: var(--rainbow);
+  background: linear-gradient(90deg, #dbeaff 0%, #7cc9ef 42%, #20beaa 100%);
   clip-path: inset(0 calc(100% - var(--progress, 0%)) 0 0);
   opacity: 0.96;
   transition: clip-path 0.08s linear, opacity 0.2s ease;
@@ -443,25 +430,6 @@
   border-radius: 999px;
   background: var(--navy);
   box-shadow: 0 0 0 1px rgba(33, 51, 78, 0.24);
-}
-
-.legend-gradient {
-  gap: 6px !important;
-}
-
-.legend-gradient em {
-  color: var(--muted-light);
-  font-size: 8px;
-  font-style: normal;
-}
-
-.legend-gradient i {
-  display: inline-block;
-  width: 34px;
-  height: 8px;
-  border-radius: 999px;
-  background: var(--rainbow);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5);
 }
 
 .legend-f-note {
@@ -978,7 +946,7 @@
    P0 学习闭环：语义视图 / 事件单步 / 预测 / 双计时
    ========================================================= */
 
-/* ---------- 语义/彩虹视图切换与图例 ---------- */
+/* ---------- 探索图例 ---------- */
 
 .legend-panel {
   display: flex;
@@ -990,44 +958,6 @@
 
 .legend[hidden] {
   display: none;
-}
-
-.view-switch {
-  display: inline-flex;
-  gap: 2px;
-  padding: 2px;
-  border: 1px solid #e2eaf5;
-  border-radius: 999px;
-  background: #f3f8fe;
-}
-
-.view-btn {
-  min-height: 26px;
-  padding: 3px 10px;
-  color: #7a889d;
-  font-size: 9.5px;
-  font-weight: 700;
-  white-space: nowrap;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  cursor: pointer;
-  transition: color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
-}
-
-.view-btn:hover {
-  color: #3f5f8e;
-}
-
-.view-btn.is-active {
-  color: #2a65d8;
-  background: #fff;
-  box-shadow: 0 2px 7px -3px rgba(36, 58, 92, 0.35);
-}
-
-.view-btn:focus-visible {
-  outline: 2px solid rgba(53, 109, 243, 0.42);
-  outline-offset: 1px;
 }
 
 .swatch--closed {
@@ -1049,11 +979,6 @@
   border-radius: 50%;
   background: #e9faf6;
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9);
-}
-
-/* 语义模式下进度导轨改为蓝绿；彩虹模式保留原彩虹 */
-.playback-panel[data-view="semantic"] .playback-rainbow {
-  background: linear-gradient(90deg, #dbeaff 0%, #7cc9ef 42%, #20beaa 100%);
 }
 
 /* ---------- 播放 / 单步 / 速度控制 ---------- */
@@ -1576,11 +1501,6 @@
 
   .legend-panel {
     align-items: flex-start;
-  }
-
-  .view-btn {
-    min-height: 28px;
-    padding: 4px 10px;
   }
 
   .state-hero {
@@ -2646,11 +2566,6 @@ body[data-page="astar"] .legend {
   font-size: 10px;
 }
 
-body[data-page="astar"] .view-btn {
-  min-height: 24px;
-  font-size: 11px;
-}
-
 /* ---------- 画布下方紧凑工具栏 ---------- */
 
 .control-toolbar {
@@ -2721,35 +2636,6 @@ body[data-page="astar"] .view-btn {
   padding: 6px 9px;
   font-size: 11px;
   border-radius: 9px;
-}
-
-.control-toolbar .source-btn {
-  flex: 0 1 auto;
-  width: auto;
-  min-height: 38px;
-  margin: 0;
-  padding: 5px 9px;
-  gap: 7px;
-  border-radius: 10px;
-}
-
-.control-toolbar .source-btn-icon {
-  width: 24px;
-  height: 24px;
-  border-radius: 7px;
-}
-
-.control-toolbar .source-btn-icon svg {
-  width: 14px;
-  height: 14px;
-}
-
-.control-toolbar .source-btn-copy strong {
-  font-size: 11px;
-}
-
-.control-toolbar .source-btn-copy small {
-  font-size: 9px;
 }
 
 .control-toolbar .shortcut-note {
@@ -4119,8 +4005,7 @@ body.astar-why-open {
   }
 
   .control-toolbar .tool-group,
-  .control-toolbar .secondary-row,
-  .control-toolbar .source-btn {
+  .control-toolbar .secondary-row {
     flex: 1 1 auto;
   }
 }

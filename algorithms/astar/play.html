@@ -121,7 +121,7 @@
           <span id="decisionHintText">开始寻路后，这里会解释开放集里谁最该先走。</span>
         </p>
 
-        <section class="playback-panel" id="playbackPanel" data-state="empty" data-view="semantic" aria-label="寻路事件回放">
+        <section class="playback-panel" id="playbackPanel" data-state="empty" aria-label="寻路事件回放">
           <div class="playback-head">
             <div class="playback-title">
               <span class="playback-icon" aria-hidden="true">
@@ -258,20 +258,7 @@
             </button>
           </div>
 
-          <button class="source-btn" id="openDocsBtn" type="button" aria-haspopup="dialog">
-            <span class="source-btn-icon" aria-hidden="true">
-              <svg viewBox="0 0 20 20" fill="none">
-                <path d="m7.3 5.4-4 4.6 4 4.6M12.7 5.4l4 4.6-4 4.6M11.1 3.5 8.9 16.5" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-            </span>
-            <span class="source-btn-copy">
-              <strong>A* 源码与解析</strong>
-              <small>C++ · Java · Python · Go</small>
-            </span>
-            <svg class="source-btn-arrow" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-              <path d="M4.5 10h11M11 5.5l4.5 4.5-4.5 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          </button>
+          <button id="openDocsBtn" type="button" hidden aria-haspopup="dialog"></button>
         </div>
 
         <footer class="board-footer">
@@ -280,11 +267,7 @@
             <span id="hintText">按住左键拖拽绘制墙壁，右键可快速擦除。</span>
           </p>
           <div class="legend-panel">
-            <div class="view-switch" role="group" aria-label="探索视图模式">
-              <button class="view-btn is-active" id="semanticViewBtn" type="button" data-view="semantic" aria-pressed="true">语义视图</button>
-              <button class="view-btn" id="rainbowViewBtn" type="button" data-view="rainbow" aria-pressed="false">彩虹探索</button>
-            </div>
-            <div class="legend" id="semanticLegend" aria-label="语义视图图例">
+            <div class="legend" id="semanticLegend" aria-label="探索图例">
               <span><i class="swatch swatch--closed"></i>已扩展</span>
               <span><i class="swatch swatch--open"></i>开放集</span>
               <span><i class="swatch swatch--current"></i>当前节点</span>
@@ -293,13 +276,6 @@
               <span><i class="swatch swatch--end"></i>终点</span>
               <span><i class="swatch swatch--wall"></i>墙壁</span>
               <span class="legend-f-note"><i aria-hidden="true">f</i>格内角标 = 开放集 f</span>
-            </div>
-            <div class="legend" id="rainbowLegend" aria-label="彩虹探索图例" hidden>
-              <span><i class="swatch swatch--start"></i>起点</span>
-              <span><i class="swatch swatch--end"></i>终点</span>
-              <span><i class="swatch swatch--wall"></i>墙壁</span>
-              <span class="legend-gradient" title="紫色最早探索，粉色最晚探索">探索顺序<em>早</em><i></i><em>晚</em></span>
-              <span><i class="swatch swatch--path"></i>最短路径</span>
             </div>
           </div>
         </footer>
@@ -696,7 +672,7 @@
         <li><i class="visual-swatch visual-swatch--semantic"></i><span><b>蓝绿格</b>：已经扩展（closed）的节点，颜色由蓝到青表示先后顺序。</span></li>
         <li><i class="visual-swatch visual-swatch--open"></i><span><b>虚线框</b>：当前开放集（frontier）中 f 最小的前 5 个节点。</span></li>
         <li><i class="visual-swatch visual-swatch--current"></i><span><b>高亮环</b>：本事件刚刚从开放集弹出的当前节点。</span></li>
-        <li><i class="visual-swatch visual-swatch--route"></i><span><b>深色线</b>：从终点沿 parent 回溯出的最短路径；切到“彩虹探索”可看旧的探索顺序配色。</span></li>
+        <li><i class="visual-swatch visual-swatch--route"></i><span><b>深色线</b>：从终点沿 parent 回溯出的最短路径。</span></li>
         <li><i class="visual-swatch visual-swatch--timeline"></i><span><b>事件滑块</b>：按事件索引单步或拖动，不会重新运行搜索。</span></li>
       </ul>
     </section>

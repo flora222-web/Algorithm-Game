@@ -300,7 +300,7 @@
     duplicates: 'threshold',
     threshold: null
   };
-  const LEVEL_FIXED_SECRET = { example: 62, midpoint: 37, invariant: 74 };
+  const LEVEL_FIXED_SECRET = { example: 62 };
   const DUPLICATE_VALUES = [1, 2, 2, 2, 4, 5, 5, 7, 9];
   const THRESHOLD_CONFIG = { low: 1, high: 100, threshold: 60 };
   const PLAY = parsePlayRoute();
@@ -312,11 +312,11 @@
     },
     midpoint: {
       name: '7 根线',
-      goal: '目标：固定 secret = 37，用 7 根线拆弹成功即通过；再答对「最坏为什么是 7 次」点亮掌握徽章。'
+      goal: '目标：用 7 根线拆弹成功即通过；再答对「最坏为什么是 7 次」点亮掌握徽章。'
     },
     invariant: {
       name: '区间不变量',
-      goal: '目标：固定 secret = 74，每次猜错后写出新的 [low, high]；连续 3 次正确完成小测，本局结束即通过。'
+      goal: '目标：每次猜错后写出新的 [low, high]；连续 3 次正确完成小测，本局结束即通过。'
     },
     boundary: {
       name: '死循环排查',
@@ -1371,7 +1371,7 @@
         dom.playModeKicker.textContent = PLAY.oracle ? 'ROLE REVERSAL · YOU SET THE SECRET' : 'CUSTOM · FREE PLAY';
       }
       if (dom.levelTitle) dom.levelTitle.textContent = PLAY.oracle ? '角色反转 · 你当出题人' : '自由探索 · 完整驾驶舱';
-      dom.levelGoal.textContent = '随机 secret，自由练习预测、拆弹与历史复盘；随时打开角色反转或源码解析。';
+      dom.levelGoal.textContent = '随机 secret，自由练习预测、拆弹与历史复盘；随时打开角色反转模式。';
     }
 
     dom.levelMastery.textContent = `${masteredCount} / ${LEVEL_IDS.length} 掌握`;

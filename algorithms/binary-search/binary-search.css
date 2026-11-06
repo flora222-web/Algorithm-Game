@@ -3153,7 +3153,7 @@ body[data-page="binary"] .app {
   font-size: 9.5px;
 }
 
-/* 数据标签：规则与源码 */
+/* 数据标签：拆弹规则 */
 .binary-rail .bomb-control-card .panel-head {
   padding-bottom: 8px;
 }
@@ -3192,18 +3192,6 @@ body[data-page="binary"] .app {
 .binary-rail .shortcut-note {
   margin: 8px 0 0;
   font-size: 10px;
-}
-
-.binary-rail .source-btn {
-  margin-top: 9px;
-}
-
-.binary-rail .source-btn-copy strong {
-  font-size: 11px;
-}
-
-.binary-rail .source-btn-copy small {
-  font-size: 9px;
 }
 
 /* 关卡标签 */
