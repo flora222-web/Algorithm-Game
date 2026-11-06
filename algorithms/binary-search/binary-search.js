@@ -710,7 +710,6 @@
 
     if (isLevel) {
       setActiveLevel(PLAY.levelId);
-      if (PLAY.levelId === 'duplicates') lockDuplicatesLevel();
       setRailTab('level');
       announce(`已进入「${LEVEL_META[PLAY.levelId].name}」关卡。`);
     } else {
@@ -731,22 +730,6 @@
         if (ui.docsViewer && !ui.docsViewer.isOpen()) ui.docsViewer.open();
       }, 140);
     }
-  }
-
-  function lockDuplicatesLevel() {
-    const view = ui.levels.duplicates;
-    view.target = 2;
-    view.mode = 'first';
-
-    [dom.duplicatesTargetGroup, dom.duplicatesModeGroup].forEach((group) => {
-      if (!group) return;
-      group.querySelectorAll('button').forEach((button) => {
-        button.disabled = true;
-        button.setAttribute('aria-disabled', 'true');
-      });
-    });
-
-    resetDuplicatesWalkthrough();
   }
 
   // =========================================================
@@ -1523,7 +1506,6 @@
     const targetButton = event.target.closest('[data-bound-target]');
     const modeButton = event.target.closest('[data-bound-mode]');
     if (!targetButton && !modeButton) return;
-    if (PLAY.mode === 'level' && PLAY.levelId === 'duplicates') return;
 
     const view = ui.levels.duplicates;
     if (targetButton) view.target = Number(targetButton.dataset.boundTarget);
