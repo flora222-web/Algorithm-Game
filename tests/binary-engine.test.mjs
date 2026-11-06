@@ -101,4 +101,27 @@ assert.equal(event.newHigh, 100);
 assert.equal(event.remaining, 75);
 assert.equal(event.feedback, 'low');
 
+// 9. The buggy low = mid search must be caught in a loop.
+const buggy = E.runBuggySearch(51, { bug: 'low-mid', maxSteps: 16 });
+assert.equal(buggy.solved, false);
+assert.equal(buggy.loopDetected, true);
+assert.equal(buggy.repeatedState.low, 50);
+assert.equal(buggy.repeatedState.high, 51);
+assert.ok(buggy.steps.length >= 6);
+
+// 10. lower_bound / upper_bound on duplicates.
+const duplicateValues = [1, 2, 2, 2, 4, 5, 5, 7, 9];
+const firstTwo = E.simulateBound(duplicateValues, 2, 'first');
+assert.equal(firstTwo.found, true);
+assert.equal(firstTwo.index, 1);
+const lastTwo = E.simulateBound(duplicateValues, 2, 'last');
+assert.equal(lastTwo.found, true);
+assert.equal(lastTwo.index, 3);
+
+// 11. monotone predicate: smallest capacity that passes.
+const predicate = E.simulatePredicate({ low: 1, high: 100, threshold: 60 });
+assert.equal(predicate.answer, 60);
+assert.equal(predicate.threshold, 60);
+assert.ok(predicate.events.length > 0);
+
 console.log('binary-engine tests passed');

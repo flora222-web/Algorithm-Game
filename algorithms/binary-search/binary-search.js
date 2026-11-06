@@ -46,8 +46,6 @@
     feedbackBox: document.getElementById('feedbackBox'),
     feedbackText: document.getElementById('feedbackText'),
 
-    numberMatrix: document.getElementById('numberMatrix'),
-    candidateBadge: document.getElementById('candidateBadge'),
     candidateCount: document.getElementById('candidateCount'),
     eliminatedCount: document.getElementById('eliminatedCount'),
     attemptCount: document.getElementById('attemptCount'),
@@ -98,6 +96,113 @@
     screenFlash: document.getElementById('screenFlash'),
     bombToast: document.getElementById('bombToast'),
     openDocsBtn: document.getElementById('openDocsBtn'),
+
+    oracleOpenBtn: document.getElementById('oracleOpenBtn'),
+    oracleDialog: document.getElementById('oracleDialog'),
+    oracleCloseBtn: document.getElementById('oracleCloseBtn'),
+    oracleMastery: document.getElementById('oracleMastery'),
+    oracleSecretInput: document.getElementById('oracleSecretInput'),
+    oracleSecretRange: document.getElementById('oracleSecretRange'),
+    oracleStartBtn: document.getElementById('oracleStartBtn'),
+    oracleSecretError: document.getElementById('oracleSecretError'),
+    oracleRoundBadge: document.getElementById('oracleRoundBadge'),
+    oracleGuessStage: document.getElementById('oracleGuessStage'),
+    oracleRangeBadge: document.getElementById('oracleRangeBadge'),
+    oracleConsistency: document.getElementById('oracleConsistency'),
+    oracleGuessValue: document.getElementById('oracleGuessValue'),
+    oracleGuessFormula: document.getElementById('oracleGuessFormula'),
+    oracleAnswerHigh: document.getElementById('oracleAnswerHigh'),
+    oracleAnswerHit: document.getElementById('oracleAnswerHit'),
+    oracleAnswerLow: document.getElementById('oracleAnswerLow'),
+    oraclePlayHint: document.getElementById('oraclePlayHint'),
+    oracleConsistencyNote: document.getElementById('oracleConsistencyNote'),
+    oracleHistory: document.getElementById('oracleHistory'),
+    oracleHistoryCount: document.getElementById('oracleHistoryCount'),
+    oracleEndSection: document.getElementById('oracleEndSection'),
+    oracleEndText: document.getElementById('oracleEndText'),
+    oracleEndGuesses: document.getElementById('oracleEndGuesses'),
+    oracleEndLayers: document.getElementById('oracleEndLayers'),
+    oracleEndConsistency: document.getElementById('oracleEndConsistency'),
+    oracleTreeMeta: document.getElementById('oracleTreeMeta'),
+    oracleTree: document.getElementById('oracleTree'),
+    oracleQuiz: document.getElementById('oracleQuiz'),
+    oracleQuizQ1: document.getElementById('oracleQuizQ1'),
+    oracleQuizQ2: document.getElementById('oracleQuizQ2'),
+    oracleQuizQ1Feedback: document.getElementById('oracleQuizQ1Feedback'),
+    oracleQuizQ2Feedback: document.getElementById('oracleQuizQ2Feedback'),
+    oracleQuizResult: document.getElementById('oracleQuizResult'),
+
+    levelTabs: document.getElementById('levelTabs'),
+    levelMastery: document.getElementById('levelMastery'),
+    levelGoal: document.getElementById('levelGoal'),
+    levelStatus: document.getElementById('levelStatus'),
+    levelQuizStatus: document.getElementById('levelQuizStatus'),
+    railTabs: document.getElementById('railTabs'),
+    railTabData: document.getElementById('railTabData'),
+    railTabLevel: document.getElementById('railTabLevel'),
+    railPaneData: document.getElementById('railPaneData'),
+    railPaneLevel: document.getElementById('railPaneLevel'),
+    taskDetailsBtn: document.getElementById('taskDetailsBtn'),
+    exampleProgress: document.getElementById('exampleProgress'),
+    exampleNote: document.getElementById('exampleNote'),
+    exampleSteps: document.getElementById('exampleSteps'),
+    exampleStart: document.getElementById('exampleStart'),
+    exampleNext: document.getElementById('exampleNext'),
+    exampleAuto: document.getElementById('exampleAuto'),
+    midpointStart: document.getElementById('midpointStart'),
+    midpointQuizOptions: document.getElementById('midpointQuizOptions'),
+    midpointQuizFeedback: document.getElementById('midpointQuizFeedback'),
+    invariantStart: document.getElementById('invariantStart'),
+    invariantStreak: document.getElementById('invariantStreak'),
+    invariantPrompt: document.getElementById('invariantPrompt'),
+    invariantLow: document.getElementById('invariantLow'),
+    invariantHigh: document.getElementById('invariantHigh'),
+    invariantCheck: document.getElementById('invariantCheck'),
+    invariantFeedback: document.getElementById('invariantFeedback'),
+    invariantHint: document.getElementById('invariantHint'),
+    boundaryRun: document.getElementById('boundaryRun'),
+    boundaryOutput: document.getElementById('boundaryOutput'),
+    boundarySummary: document.getElementById('boundarySummary'),
+    boundarySteps: document.getElementById('boundarySteps'),
+    boundaryQuizOptions: document.getElementById('boundaryQuizOptions'),
+    boundaryQuizFeedback: document.getElementById('boundaryQuizFeedback'),
+
+    duplicatesTitle: document.getElementById('duplicatesTitle'),
+    duplicatesTargetGroup: document.getElementById('duplicatesTargetGroup'),
+    duplicatesModeGroup: document.getElementById('duplicatesModeGroup'),
+    duplicatesArray: document.getElementById('duplicatesArray'),
+    duplicatesState: document.getElementById('duplicatesState'),
+    duplicatesDecision: document.getElementById('duplicatesDecision'),
+    duplicatesSteps: document.getElementById('duplicatesSteps'),
+    duplicatesNext: document.getElementById('duplicatesNext'),
+    duplicatesAuto: document.getElementById('duplicatesAuto'),
+    duplicatesReset: document.getElementById('duplicatesReset'),
+    duplicatesProgress: document.getElementById('duplicatesProgress'),
+    duplicatesResult: document.getElementById('duplicatesResult'),
+    duplicatesResultText: document.getElementById('duplicatesResultText'),
+    duplicatesReveal: document.getElementById('duplicatesReveal'),
+    duplicatesQuizPrompt: document.getElementById('duplicatesQuizPrompt'),
+    duplicatesQuizOptions: document.getElementById('duplicatesQuizOptions'),
+    duplicatesQuizFeedback: document.getElementById('duplicatesQuizFeedback'),
+
+    thresholdAsk: document.getElementById('thresholdAsk'),
+    thresholdQuestion: document.getElementById('thresholdQuestion'),
+    thresholdAnswer: document.getElementById('thresholdAnswer'),
+    thresholdLow: document.getElementById('thresholdLow'),
+    thresholdHigh: document.getElementById('thresholdHigh'),
+    thresholdMid: document.getElementById('thresholdMid'),
+    thresholdDecision: document.getElementById('thresholdDecision'),
+    thresholdSteps: document.getElementById('thresholdSteps'),
+    thresholdNext: document.getElementById('thresholdNext'),
+    thresholdAuto: document.getElementById('thresholdAuto'),
+    thresholdReset: document.getElementById('thresholdReset'),
+    thresholdProgress: document.getElementById('thresholdProgress'),
+    thresholdResult: document.getElementById('thresholdResult'),
+    thresholdResultText: document.getElementById('thresholdResultText'),
+    thresholdReveal: document.getElementById('thresholdReveal'),
+    thresholdQuizOptions: document.getElementById('thresholdQuizOptions'),
+    thresholdQuizFeedback: document.getElementById('thresholdQuizFeedback'),
+
     liveRegion: document.getElementById('liveRegion')
   };
 
@@ -112,6 +217,43 @@
     switchConfirmed: false,
     docsViewer: null,
     lastCut: null,
+    railTab: 'data',
+    levels: {
+      active: 'example',
+      session: {
+        example: { passed: false, quizCorrect: false },
+        midpoint: { passed: false, quizCorrect: false },
+        invariant: { passed: false, quizCorrect: false },
+        boundary: { passed: false, quizCorrect: false },
+        duplicates: { passed: false, quizCorrect: false },
+        threshold: { passed: false, quizCorrect: false }
+      },
+      invariant: { streak: 0, promptOpen: false, answered: false },
+      boundary: { result: null },
+      duplicates: { target: 2, mode: 'first', state: null, auto: false },
+      threshold: { state: null, auto: false }
+    },
+    oracle: {
+      open: false,
+      status: 'ready',
+      secret: 62,
+      low: 1,
+      high: 100,
+      guess: null,
+      step: 0,
+      guesses: [],
+      inconsistent: false,
+      endReason: null,
+      quiz: { q1: false, q2: false, recorded: false }
+    },
+    demo: {
+      active: false,
+      auto: false,
+      index: 0,
+      total: 0,
+      events: [],
+      done: false
+    },
     timers: {
       toast: 0,
       toastHide: 0,
@@ -120,11 +262,13 @@
       flash: 0,
       shake: 0,
       error: 0,
-      cut: 0
+      cut: 0,
+      demo: 0,
+      duplicates: 0,
+      threshold: 0
     }
   };
 
-  const matrixCells = [];
   const wireEls = [];
 
   if (!ENGINE) {
@@ -135,6 +279,151 @@
   const LOWER_BOUND = ENGINE.LOWER_BOUND;
   const UPPER_BOUND = ENGINE.UPPER_BOUND;
   const MAX_WIRES = ENGINE.MAX_WIRES || 7;
+  const LEVEL_IDS = ['example', 'midpoint', 'invariant', 'boundary', 'duplicates', 'threshold'];
+  const DUPLICATE_VALUES = [1, 2, 2, 2, 4, 5, 5, 7, 9];
+  const THRESHOLD_CONFIG = { low: 1, high: 100, threshold: 60 };
+
+  const LEVEL_META = {
+    example: {
+      name: '示例演示',
+      goal: '目标：跟随固定 secret = 62 的最优二分演示，观察每次 mid 与新区间；演示结束即通过。'
+    },
+    midpoint: {
+      name: '7 根线',
+      goal: '目标：用 7 根线拆弹成功即通过；再答对「最坏为什么是 7 次」点亮掌握徽章。'
+    },
+    invariant: {
+      name: '区间不变量',
+      goal: '目标：每次猜错后写出新的 [low, high]。连续 3 次正确获得小测徽章；本局结束即通过。'
+    },
+    boundary: {
+      name: '死循环排查',
+      goal: '目标：运行 low = mid 的 buggy 二分，找到重复区间 [50, 51]，并指出错误的那一行。'
+    },
+    duplicates: {
+      name: '重复元素',
+      goal: '目标：在重复数组里找第一个或最后一个目标值；一步步观察区间怎样收缩，结束时再揭晓它的正式名字。'
+    },
+    threshold: {
+      name: '最小电量',
+      goal: '目标：只靠“容量 x 能撑过 8 小时吗”的是/否回答，找出最小可用容量；结束时再揭晓这类题的名字。'
+    }
+  };
+
+  const MIDPOINT_QUIZ = [
+    {
+      text: '每次比较都把候选数量至少减半，⌈log₂100⌉ = 7。',
+      correct: true,
+      explain: '100 → 50 → 25 → 12 → 6 → 3 → 1，7 次后最多只剩一个候选。'
+    },
+    {
+      text: '100 ÷ 7 ≈ 14，所以每轮要排除 14 个数字。',
+      correct: false,
+      hint: '除法不是二分的收缩方式，观察候选数量如何变化。'
+    },
+    {
+      text: '7 是 1–100 的中位数，所以最多猜 7 次。',
+      correct: false,
+      hint: '中位数是 50，不是 7；最坏次数来自折半。'
+    }
+  ];
+
+  const BOUNDARY_QUIZ = [
+    {
+      text: '第 4 行 low = mid：猜小后没有排除 mid，区间不再缩小。',
+      correct: true,
+      explain: 'low 应该更新为 mid + 1；停在 mid 会让 [50, 51] 反复出现。'
+    },
+    {
+      text: '第 6 行 high = mid − 1：猜大后右边界收缩得太快。',
+      correct: false,
+      hint: '这行是正确的排除方式，问题不在它。'
+    },
+    {
+      text: '第 2 行 mid = low + Math.floor(...)：中点公式写错了。',
+      correct: false,
+      hint: '取中点公式没有问题，检查边界更新。'
+    }
+  ];
+
+  const DUPLICATES_QUIZ = [
+    {
+      text: '因为命中目标不代表它就是第一个/最后一个，还要继续向边界收缩。',
+      correct: true,
+      explain: '找第一个时保留 mid（high = mid），找最后一个时把 mid 当作可继续向右的边界（low = mid + 1），直到区间收敛。'
+    },
+    {
+      text: '因为 mid − 1 一定会越界。',
+      correct: false,
+      hint: 'mid − 1 不一定越界；真正的问题是会不会漏掉更早或更晚的目标。'
+    },
+    {
+      text: '因为数组里有重复元素，所以每次 high 都必须减 1。',
+      correct: false,
+      hint: '重复元素恰恰要求保留可能的目标位置，而不是盲目排除。'
+    }
+  ];
+
+  const THRESHOLD_QUIZ = [
+    {
+      text: '因为“容量越大越容易撑过 8 小时”，答案只会从否变成是，具有单调性。',
+      correct: true,
+      explain: '存在一个分界点：小于它都失败，大于等于它都成功，所以能每次砍掉一半。'
+    },
+    {
+      text: '因为 1–100 只有 100 个数，逐个试也很快。',
+      correct: false,
+      hint: '线性试最坏要 100 次；关键在于答案单调，而不是数字少。'
+    },
+    {
+      text: '因为容量越大耗电越慢，所以随便猜一个就行。',
+      correct: false,
+      hint: '不能随便猜；是/否回答会告诉我们该保留哪一半。'
+    }
+  ];
+
+  // 角色反转：学习者当裁判，电脑只用 nextMid(low, high) 猜，不读取 secret。
+  const ORACLE_MAX_STEPS = 10;
+  const ORACLE_QUIZ = {
+    q1: {
+      options: [
+        {
+          text: '每轮把候选数至少减半：100 → 50 → 25 → 12 → 6 → 3 → 1，⌈log₂100⌉ = 7。',
+          correct: true,
+          explain: '7 来自折半次数的上界，不是把 100 平分成 7 份。'
+        },
+        {
+          text: '100 ÷ 7 ≈ 14，所以每次固定排除 14 个数字。',
+          correct: false,
+          hint: '二分每次砍掉一半，不是等分成 7 份。'
+        },
+        {
+          text: '7 是 1–100 的中位数，所以最多猜 7 次。',
+          correct: false,
+          hint: '中位数是 50；7 是 ⌈log₂100⌉。'
+        }
+      ]
+    },
+    q2: {
+      options: [
+        {
+          text: '不能。比较结果一旦不可信，secret 可能被排除出区间，二分失去正确性保证。',
+          correct: true,
+          explain: '二分依赖每次回答真实；裁判说谎时，不变式 secret ∈ [low, high] 会被破坏。'
+        },
+        {
+          text: '能。只要把次数上限放宽到 10 次，就一定能找到。',
+          correct: false,
+          hint: '增加次数无法弥补错误的方向信息。'
+        },
+        {
+          text: '能。二分每次都在一半里找，所以总有答案。',
+          correct: false,
+          hint: '“在一半里”的前提是回答真实；假回答会指向错误的一半。'
+        }
+      ]
+    }
+  };
 
   init();
 
@@ -143,8 +432,10 @@
   // =========================================================
 
   function init() {
-    buildMatrix();
     buildWires();
+    buildLevelQuizOptions();
+    initWalkthroughs();
+    initOracle();
     bindEvents();
     initDocs();
     initNavigationGuard();
@@ -152,6 +443,7 @@
     resetPredictionForRound();
     renderAll();
     refreshProgress();
+    setRailTab('data');
   }
 
   function bindEvents() {
@@ -159,7 +451,6 @@
     dom.startBombBtnInline.addEventListener('click', startRound);
     dom.guessForm.addEventListener('submit', submitGuess);
     dom.predictForm.addEventListener('submit', submitPrediction);
-    dom.numberMatrix.addEventListener('click', handleMatrixClick);
 
     dom.guessInput.addEventListener('input', () => {
       dom.guessForm.classList.remove('is-shaking');
@@ -189,23 +480,52 @@
       }
     });
 
+    dom.levelTabs.addEventListener('click', handleLevelTabClick);
+    dom.railTabs.addEventListener('click', handleRailTabClick);
+    dom.taskDetailsBtn.addEventListener('click', openTaskDetails);
+    dom.exampleStart.addEventListener('click', startExampleDemo);
+    dom.exampleNext.addEventListener('click', () => stepDemo());
+    dom.exampleAuto.addEventListener('click', toggleDemoAuto);
+    dom.midpointStart.addEventListener('click', () => startRound());
+    dom.invariantStart.addEventListener('click', () => startRound());
+    dom.invariantCheck.addEventListener('click', checkInvariantRange);
+    dom.invariantLow.addEventListener('keydown', handleInvariantKeydown);
+    dom.invariantHigh.addEventListener('keydown', handleInvariantKeydown);
+    dom.boundaryRun.addEventListener('click', runBoundaryBug);
+
+    dom.duplicatesTargetGroup.addEventListener('click', handleDuplicatesSetupClick);
+    dom.duplicatesModeGroup.addEventListener('click', handleDuplicatesSetupClick);
+    dom.duplicatesNext.addEventListener('click', () => stepDuplicates(false));
+    dom.duplicatesAuto.addEventListener('click', toggleDuplicatesAuto);
+    dom.duplicatesReset.addEventListener('click', resetDuplicatesWalkthrough);
+    dom.thresholdNext.addEventListener('click', () => stepThreshold(false));
+    dom.thresholdAuto.addEventListener('click', toggleThresholdAuto);
+    dom.thresholdReset.addEventListener('click', resetThresholdWalkthrough);
+
+    dom.oracleOpenBtn.addEventListener('click', openOracleDialog);
+    dom.oracleCloseBtn.addEventListener('click', closeOracleDialog);
+    dom.oracleDialog.addEventListener('close', handleOracleDialogClosed);
+    dom.oracleDialog.addEventListener('click', (event) => {
+      if (event.target === dom.oracleDialog) closeOracleDialog();
+    });
+    dom.oracleSecretInput.addEventListener('input', handleOracleSecretInput);
+    dom.oracleSecretRange.addEventListener('input', handleOracleSecretRange);
+    dom.oracleStartBtn.addEventListener('click', startOracleSession);
+    dom.oracleAnswerHigh.addEventListener('click', () => submitOracleAnswer('high'));
+    dom.oracleAnswerHit.addEventListener('click', () => submitOracleAnswer('hit'));
+    dom.oracleAnswerLow.addEventListener('click', () => submitOracleAnswer('low'));
+    dom.oracleQuiz.addEventListener('click', handleOracleQuizClick);
+
     document.addEventListener('keydown', handleGlobalKeydown);
   }
 
-  function buildMatrix() {
-    const fragment = document.createDocumentFragment();
-
-    for (let value = LOWER_BOUND; value <= UPPER_BOUND; value += 1) {
-      const cell = document.createElement('span');
-      cell.className = 'matrix-cell is-candidate';
-      cell.dataset.value = String(value);
-      cell.setAttribute('aria-hidden', 'true');
-      cell.textContent = String(value);
-      fragment.appendChild(cell);
-      matrixCells.push(cell);
-    }
-
-    dom.numberMatrix.appendChild(fragment);
+  function initWalkthroughs() {
+    ui.levels.duplicates.state = ENGINE.createBoundState(
+      DUPLICATE_VALUES.slice(),
+      ui.levels.duplicates.target,
+      ui.levels.duplicates.mode
+    );
+    ui.levels.threshold.state = ENGINE.createPredicateState(THRESHOLD_CONFIG);
   }
 
   function buildWires() {
@@ -296,11 +616,1153 @@
   }
 
   // =========================================================
+  // 关卡 · 掌握徽章
+  // =========================================================
+
+  function buildLevelQuizOptions() {
+    fillQuizOptions(dom.midpointQuizOptions, MIDPOINT_QUIZ);
+    fillQuizOptions(dom.boundaryQuizOptions, BOUNDARY_QUIZ);
+    fillQuizOptions(dom.duplicatesQuizOptions, DUPLICATES_QUIZ);
+    fillQuizOptions(dom.thresholdQuizOptions, THRESHOLD_QUIZ);
+
+    dom.midpointQuizOptions.addEventListener('click', (event) => handleLevelQuizClick('midpoint', event));
+    dom.boundaryQuizOptions.addEventListener('click', (event) => handleLevelQuizClick('boundary', event));
+    dom.duplicatesQuizOptions.addEventListener('click', (event) => handleLevelQuizClick('duplicates', event));
+    dom.thresholdQuizOptions.addEventListener('click', (event) => handleLevelQuizClick('threshold', event));
+  }
+
+  function fillQuizOptions(container, options) {
+    if (!container) return;
+
+    const fragment = document.createDocumentFragment();
+    options.forEach((option, index) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'quiz-option';
+      button.dataset.index = String(index);
+      button.textContent = option.text;
+      fragment.appendChild(button);
+    });
+    container.appendChild(fragment);
+  }
+
+  function handleLevelTabClick(event) {
+    const tab = event.target.closest('[data-level]');
+    if (!tab || !dom.levelTabs.contains(tab)) return;
+    setActiveLevel(tab.dataset.level);
+    setRailTab('level');
+  }
+
+  function handleRailTabClick(event) {
+    const tab = event.target.closest('[data-rail-tab]');
+    if (!tab || !dom.railTabs.contains(tab)) return;
+    setRailTab(tab.dataset.railTab);
+  }
+
+  function openTaskDetails() {
+    setRailTab('level');
+
+    if (!window.matchMedia('(max-width: 900px)').matches || !dom.railPaneLevel) return;
+    dom.railPaneLevel.scrollIntoView({
+      behavior: reduceMotion ? 'auto' : 'smooth',
+      block: 'start'
+    });
+  }
+
+  function setRailTab(tab) {
+    const next = tab === 'level' ? 'level' : 'data';
+    const isData = next === 'data';
+    ui.railTab = next;
+
+    [[dom.railTabData, isData], [dom.railTabLevel, !isData]].forEach(([button, active]) => {
+      if (!button) return;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-selected', active ? 'true' : 'false');
+      button.tabIndex = active ? 0 : -1;
+    });
+
+    if (dom.railPaneData) dom.railPaneData.hidden = !isData;
+    if (dom.railPaneLevel) dom.railPaneLevel.hidden = isData;
+  }
+
+  function setActiveLevel(levelId) {
+    if (!LEVEL_META[levelId] || ui.levels.active === levelId) return;
+
+    if (ui.levels.active === 'invariant' && levelId !== 'invariant') {
+      ui.levels.invariant.promptOpen = false;
+      ui.levels.invariant.answered = false;
+    }
+
+    if (levelId !== 'duplicates') stopDuplicatesAuto();
+    if (levelId !== 'threshold') stopThresholdAuto();
+
+    ui.levels.active = levelId;
+
+    if (levelId !== 'example' && ui.demo.auto) {
+      ui.demo.auto = false;
+      window.clearTimeout(ui.timers.demo);
+    }
+
+    renderLevels();
+    announce(`已切换到「${LEVEL_META[levelId].name}」关卡。`);
+  }
+
+  function startExampleDemo() {
+    const demo = ENGINE.simulateOptimal(62);
+
+    startRound({ secret: 62, demo: true });
+
+    ui.demo.events = demo.events;
+    ui.demo.total = demo.events.length;
+    ui.demo.index = 0;
+    ui.demo.done = false;
+    ui.demo.auto = false;
+    ui.demo.active = true;
+
+    setFeedback('neutral', `演示开始：secret = 62，最优二分共 ${demo.events.length} 步。点击「下一步」或「自动演示」。`);
+    dom.bombLead.textContent = '示例关卡：密码固定为 62。观察 mid 如何把候选区间不断减半。';
+    renderAll();
+
+    window.requestAnimationFrame(() => {
+      dom.exampleNext.focus({ preventScroll: true });
+    });
+  }
+
+  function stepDemo() {
+    if (!ui.demo.active || !ui.game || ui.game.status !== 'playing') return;
+
+    window.clearTimeout(ui.timers.demo);
+
+    const nextEvent = ui.demo.events[ui.demo.index];
+    if (!nextEvent) {
+      finishDemo();
+      return;
+    }
+
+    const result = ENGINE.applyGuess(ui.game, nextEvent.mid);
+    if (!result.ok) {
+      finishDemo();
+      return;
+    }
+
+    const eventData = result.event;
+    ui.game = result.state;
+    ui.events.push(eventData);
+    ui.demo.index += 1;
+    resetPredictionForRound();
+
+    if (eventData.feedback === 'hit') {
+      setFeedback('success', `第 ${ui.events.length} 步：mid = ${eventData.mid}，命中 62！`);
+    } else {
+      const direction = eventData.feedback === 'low' ? '太小 ↑' : '太大 ↓';
+      setFeedback(eventData.feedback, `第 ${ui.events.length} 步：mid = ${eventData.mid} ${direction}，新区间 ${eventData.newLow}–${eventData.newHigh}。`);
+    }
+    dom.bombLead.textContent = `示例 secret = 62；已执行 ${ui.demo.index} / ${ui.demo.total} 步。`;
+
+    renderAll();
+
+    if (ui.game.status !== 'playing' || ui.demo.index >= ui.demo.events.length) {
+      finishDemo();
+    } else if (ui.demo.auto) {
+      scheduleDemoStep();
+    }
+  }
+
+  function finishDemo() {
+    if (ui.demo.done) return;
+
+    window.clearTimeout(ui.timers.demo);
+    const completed = Boolean(ui.game && ui.game.status === 'defused');
+
+    ui.demo.auto = false;
+    ui.demo.active = false;
+    ui.demo.done = true;
+
+    if (completed) {
+      setFeedback('success', `示例完成：secret = 62，按最优二分用 ${ui.events.length} 步锁定。`);
+      dom.bombLead.textContent = '示例完成。切换到「7 根线」或「区间不变量」继续训练。';
+      announce(`示例关卡完成，共 ${ui.events.length} 步，通过进度已记录。`);
+      recordLevelResult('example', { passed: true });
+    } else {
+      setFeedback('neutral', '示例演示结束。');
+      announce('示例演示结束。');
+    }
+
+    renderAll();
+  }
+
+  function toggleDemoAuto() {
+    if (!ui.demo.active) return;
+
+    ui.demo.auto = !ui.demo.auto;
+
+    if (ui.demo.auto) {
+      scheduleDemoStep();
+      announce('自动演示开始。');
+    } else {
+      window.clearTimeout(ui.timers.demo);
+      announce('自动演示已暂停。');
+    }
+
+    renderLevels();
+  }
+
+  function scheduleDemoStep() {
+    window.clearTimeout(ui.timers.demo);
+    ui.timers.demo = window.setTimeout(() => {
+      if (!ui.demo.active || !ui.demo.auto) return;
+      stepDemo();
+    }, reduceMotion ? 320 : 950);
+  }
+
+  function renderExamplePanel() {
+    if (!dom.exampleSteps) return;
+
+    const total = ui.demo.total || ui.demo.events.length;
+    dom.exampleProgress.textContent = `${ui.demo.index} / ${total} 步`;
+
+    if (ui.demo.active) {
+      dom.exampleNote.textContent = ui.demo.auto ? '自动演示中…' : '点击「下一步」逐步观察';
+    } else if (ui.demo.done) {
+      dom.exampleNote.textContent = '演示完成 · 进度已保存';
+    } else {
+      dom.exampleNote.textContent = '点击开始，逐步观察区间';
+    }
+
+    renderExampleSteps();
+  }
+
+  function renderExampleSteps() {
+    dom.exampleSteps.replaceChildren();
+
+    const visible = (ui.demo.active || ui.demo.done) && ui.events.length > 0;
+    if (!visible) {
+      const empty = document.createElement('li');
+      empty.className = 'level-step-empty';
+      empty.textContent = '尚未开始演示';
+      dom.exampleSteps.appendChild(empty);
+      return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    ui.events.forEach((event, index) => {
+      const item = document.createElement('li');
+      item.className = 'level-step';
+      if (event.feedback === 'hit') item.classList.add('is-hit');
+
+      const number = document.createElement('span');
+      number.className = 'level-step-no';
+      number.textContent = `#${index + 1}`;
+
+      const body = document.createElement('span');
+      body.className = 'level-step-body';
+      const mid = document.createElement('b');
+      mid.textContent = `mid ${event.mid}`;
+      const feedback = document.createElement('span');
+      feedback.textContent = event.feedback === 'low'
+        ? '太小 ↑'
+        : event.feedback === 'high'
+          ? '太大 ↓'
+          : '命中 ✓';
+      const range = document.createElement('span');
+      range.className = 'level-step-range';
+      range.textContent = event.feedback === 'hit'
+        ? '已锁定'
+        : `新区间 ${event.newLow}–${event.newHigh}`;
+
+      body.append(mid, ' · ', feedback, ' · ', range);
+      item.append(number, body);
+      fragment.appendChild(item);
+    });
+
+    dom.exampleSteps.appendChild(fragment);
+  }
+
+  function showInvariantPrompt() {
+    if (!ui.game || ui.game.status !== 'playing' || ui.demo.active) return;
+    if (ui.levels.active !== 'invariant') return;
+
+    ui.levels.invariant.promptOpen = true;
+    ui.levels.invariant.answered = false;
+    dom.invariantLow.value = '';
+    dom.invariantHigh.value = '';
+    setInvariantFeedback('neutral', `当前候选区间还剩 ${ui.game.high - ui.game.low + 1} 个数字，写出新的 low 与 high。`);
+    renderLevels();
+  }
+
+  function handleInvariantKeydown(event) {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    checkInvariantRange();
+  }
+
+  function checkInvariantRange() {
+    if (!ui.game || ui.game.status !== 'playing') {
+      setInvariantFeedback('wrong', '本局已经结束，下一局再继续练习。');
+      return;
+    }
+
+    if (ui.levels.invariant.answered) {
+      setInvariantFeedback('neutral', '这个区间已经校验过了；再猜错一次会出现新题。');
+      return;
+    }
+
+    const low = Number(dom.invariantLow.value);
+    const high = Number(dom.invariantHigh.value);
+    const expectedLow = ui.game.low;
+    const expectedHigh = ui.game.high;
+
+    if (dom.invariantLow.value === '' || dom.invariantHigh.value === '' || !Number.isInteger(low) || !Number.isInteger(high)) {
+      setInvariantFeedback('wrong', '请输入两个整数：新的 low 和 high。');
+      return;
+    }
+
+    if (low === expectedLow && high === expectedHigh) {
+      const flags = mergeLevelFlags('invariant');
+      ui.levels.invariant.answered = true;
+      ui.levels.invariant.streak = Math.min(3, ui.levels.invariant.streak + 1);
+
+      if (ui.levels.invariant.streak >= 3 && !flags.quizCorrect) {
+        setInvariantFeedback('correct', `✓ 正确！新区间是 [${low}, ${high}]。连续 3 次正确，小测徽章点亮。`);
+        recordLevelResult('invariant', { quizCorrect: true });
+      } else {
+        const shown = flags.quizCorrect ? 3 : ui.levels.invariant.streak;
+        setInvariantFeedback('correct', `✓ 正确！新区间是 [${low}, ${high}]。连续 ${shown} / 3 次。`);
+        renderLevels();
+      }
+
+      dom.invariantLow.value = '';
+      dom.invariantHigh.value = '';
+    } else {
+      const flags = mergeLevelFlags('invariant');
+      if (!flags.quizCorrect) ui.levels.invariant.streak = 0;
+      setInvariantFeedback('wrong', `✗ 还不对。看上方状态面板：当前 low = ${expectedLow}，high = ${expectedHigh}。`);
+      renderLevels();
+    }
+  }
+
+  function setInvariantFeedback(tone, text) {
+    dom.invariantFeedback.dataset.tone = tone;
+    dom.invariantFeedback.textContent = text;
+  }
+
+  function runBoundaryBug() {
+    let result = null;
+
+    try {
+      result = ENGINE.runBuggySearch(51, { bug: 'low-mid', maxSteps: 16 });
+    } catch {
+      setQuizFeedback('boundary', 'wrong', '运行失败，请刷新页面后重试。');
+      return;
+    }
+
+    ui.levels.boundary.result = result;
+    renderBoundaryResult(result);
+    renderLevels();
+
+    if (!mergeLevelFlags('boundary').quizCorrect) {
+      setQuizFeedback('boundary', 'neutral', result.loopDetected
+        ? '已复现死循环。哪一行让它停不下来？'
+        : '运行结束，未检测到重复区间。');
+    }
+
+    if (result.loopDetected) {
+      recordLevelResult('boundary', { passed: true });
+      announce(`已复现死循环，重复区间是 ${result.repeatedState.low} 到 ${result.repeatedState.high}。`);
+    }
+  }
+
+  function renderBoundaryResult(result) {
+    dom.boundarySteps.replaceChildren();
+
+    const repeated = result.repeatedState;
+    if (result.loopDetected && repeated) {
+      const lastStep = result.steps[result.steps.length - 1];
+      dom.boundarySummary.textContent = `检测到死循环：区间 [${repeated.low}, ${repeated.high}] 再次出现，mid 停在 ${lastStep ? lastStep.mid : '—'}，low 不再前进。`;
+    } else if (result.solved) {
+      dom.boundarySummary.textContent = `运行结束：已命中 secret，未触发死循环。`;
+    } else {
+      dom.boundarySummary.textContent = `运行了 ${result.maxSteps} 步仍未结束，但没有捕获到重复状态。`;
+    }
+
+    const fragment = document.createDocumentFragment();
+    result.steps.forEach((step, index) => {
+      const item = document.createElement('li');
+      item.className = 'level-step';
+
+      const repeats = Boolean(repeated && step.low === repeated.low && step.high === repeated.high);
+      const leadsToRepeat = Boolean(repeated && step.newLow === repeated.low && step.newHigh === repeated.high);
+      if (repeats || leadsToRepeat) item.classList.add('is-repeat');
+
+      const number = document.createElement('span');
+      number.className = 'level-step-no';
+      number.textContent = `#${index + 1}`;
+
+      const body = document.createElement('span');
+      body.className = 'level-step-body';
+      const range = document.createElement('b');
+      range.textContent = `[${step.low}, ${step.high}]`;
+      const mid = document.createElement('span');
+      mid.textContent = ` mid ${step.mid} · `;
+      const feedback = document.createElement('span');
+      feedback.textContent = step.feedback === 'low' ? '太小 ↑' : step.feedback === 'high' ? '太大 ↓' : '命中 ✓';
+      const nextRange = document.createElement('span');
+      nextRange.className = 'level-step-range';
+      nextRange.textContent = ` → [${step.newLow}, ${step.newHigh}]`;
+
+      body.append(range, mid, feedback, nextRange);
+
+      if (repeats) {
+        const flag = document.createElement('span');
+        flag.className = 'level-step-flag';
+        flag.textContent = '重复';
+        body.appendChild(flag);
+      }
+
+      item.append(number, body);
+      fragment.appendChild(item);
+    });
+
+    dom.boundarySteps.appendChild(fragment);
+  }
+
+  function handleLevelQuizClick(levelId, event) {
+    const button = event.target.closest('.quiz-option');
+    if (!button || button.disabled) return;
+
+    const config = getQuizConfig(levelId);
+    if (!config || !config.container || !config.container.contains(button)) return;
+
+    if ((levelId === 'duplicates' || levelId === 'threshold')
+      && getWalkthroughStatus(levelId) !== 'done'
+      && !mergeLevelFlags(levelId).quizCorrect) {
+      setQuizFeedback(levelId, 'neutral', '先走完一遍演示，再作答。');
+      return;
+    }
+
+    const option = config.options[Number(button.dataset.index)];
+    if (!option) return;
+
+    if (option.correct) {
+      config.container.dataset.solved = 'true';
+      config.container.querySelectorAll('.quiz-option').forEach((item) => {
+        item.disabled = true;
+        item.classList.toggle('is-correct', item === button);
+      });
+      setQuizFeedback(levelId, 'correct', `✓ 正确。${option.explain || ''}`);
+      recordLevelResult(levelId, { quizCorrect: true });
+    } else {
+      button.classList.add('is-wrong');
+      window.setTimeout(() => {
+        if (button.isConnected) button.classList.remove('is-wrong');
+      }, 800);
+      setQuizFeedback(levelId, 'wrong', `✗ 再想想。${option.hint || ''}`);
+    }
+  }
+
+  function getQuizConfig(levelId) {
+    const configs = {
+      midpoint: { container: dom.midpointQuizOptions, options: MIDPOINT_QUIZ, feedback: dom.midpointQuizFeedback },
+      boundary: { container: dom.boundaryQuizOptions, options: BOUNDARY_QUIZ, feedback: dom.boundaryQuizFeedback },
+      duplicates: { container: dom.duplicatesQuizOptions, options: DUPLICATES_QUIZ, feedback: dom.duplicatesQuizFeedback },
+      threshold: { container: dom.thresholdQuizOptions, options: THRESHOLD_QUIZ, feedback: dom.thresholdQuizFeedback }
+    };
+    return configs[levelId] || null;
+  }
+
+  function setQuizFeedback(levelId, tone, text) {
+    const config = getQuizConfig(levelId);
+    const element = config && config.feedback;
+    if (!element) return;
+    element.dataset.tone = tone;
+    element.textContent = text;
+  }
+
+  function syncQuizSolvedState() {
+    LEVEL_IDS.filter((levelId) => levelId !== 'example').forEach((levelId) => {
+      const config = getQuizConfig(levelId);
+      if (!config || !config.container) return;
+      const solved = mergeLevelFlags(levelId).quizCorrect;
+      if (!solved) return;
+
+      config.container.querySelectorAll('.quiz-option').forEach((button, index) => {
+        button.disabled = true;
+        if (config.options[index] && config.options[index].correct) button.classList.add('is-correct');
+      });
+
+      if (config.container.dataset.solved !== 'true') {
+        config.container.dataset.solved = 'true';
+        setQuizFeedback(levelId, 'correct', '✓ 小测已通过，记录已保存在本地。');
+      }
+    });
+  }
+
+  function readLevelRecord(levelId) {
+    try {
+      if (!window.ProgressStore) return null;
+      return window.ProgressStore.getLevels('binary')[levelId] || null;
+    } catch {
+      return null;
+    }
+  }
+
+  function mergeLevelFlags(levelId) {
+    const stored = readLevelRecord(levelId);
+    const session = ui.levels.session[levelId];
+    return {
+      passed: Boolean((stored && stored.passed) || session.passed),
+      quizCorrect: Boolean((stored && stored.quizCorrect) || session.quizCorrect)
+    };
+  }
+
+  function isLevelMastered(levelId, flags) {
+    return flags.passed && (levelId === 'example' || flags.quizCorrect);
+  }
+
+  function recordLevelResult(levelId, patch = {}) {
+    const session = ui.levels.session[levelId];
+    const current = mergeLevelFlags(levelId);
+    const next = {
+      passed: current.passed || patch.passed === true,
+      quizCorrect: current.quizCorrect || patch.quizCorrect === true
+    };
+
+    const newlyPassed = next.passed && !current.passed;
+    const newlyQuiz = next.quizCorrect && !current.quizCorrect;
+
+    session.passed = next.passed;
+    session.quizCorrect = next.quizCorrect;
+
+    if (newlyPassed || newlyQuiz) {
+      try {
+        if (window.ProgressStore) {
+          window.ProgressStore.recordLevel('binary', levelId, next);
+        }
+      } catch {
+        // 本地存储不可用时，本局内仍然保留进度状态。
+      }
+
+      const label = LEVEL_META[levelId].name;
+      showToast(`${label} · 进度已保存`, 'success');
+      announce(`${label}关卡进度已保存。`);
+    }
+
+    renderLevels();
+  }
+
+  function renderLevels() {
+    if (!dom.levelTabs) return;
+
+    const active = ui.levels.active;
+    let masteredCount = 0;
+
+    LEVEL_IDS.forEach((levelId) => {
+      const flags = mergeLevelFlags(levelId);
+      const mastered = isLevelMastered(levelId, flags);
+      if (mastered) masteredCount += 1;
+
+      const tab = Array.from(dom.levelTabs.querySelectorAll('[data-level]'))
+        .find((item) => item.dataset.level === levelId);
+      if (!tab) return;
+
+      tab.classList.toggle('is-active', levelId === active);
+      tab.classList.toggle('is-mastered', mastered);
+      tab.classList.toggle('is-passed', flags.passed && !mastered);
+      tab.setAttribute('aria-selected', levelId === active ? 'true' : 'false');
+
+      const badge = tab.querySelector('.level-badge');
+      if (badge) {
+        badge.textContent = mastered ? '已掌握' : flags.passed ? '已通过' : flags.quizCorrect ? '小测 ✓' : '未开始';
+        badge.dataset.state = mastered ? 'mastered' : flags.passed ? 'passed' : flags.quizCorrect ? 'quiz' : 'idle';
+      }
+    });
+
+    dom.levelGoal.textContent = LEVEL_META[active].goal;
+    dom.levelMastery.textContent = `${masteredCount} / ${LEVEL_IDS.length} 掌握`;
+    dom.levelMastery.title = `已掌握 ${masteredCount} / ${LEVEL_IDS.length} 个关卡`;
+
+    const activeFlags = mergeLevelFlags(active);
+    const activeMastered = isLevelMastered(active, activeFlags);
+
+    dom.levelStatus.textContent = activeMastered ? '已掌握' : activeFlags.passed ? '已通过' : '未通过';
+    dom.levelStatus.dataset.tone = activeMastered ? 'mastered' : activeFlags.passed ? 'passed' : 'neutral';
+
+    if (active === 'example') {
+      dom.levelQuizStatus.textContent = activeFlags.passed ? '演示完成' : '完成演示即可';
+      dom.levelQuizStatus.dataset.tone = activeFlags.passed ? 'passed' : 'neutral';
+    } else {
+      dom.levelQuizStatus.textContent = activeFlags.quizCorrect ? '小测 ✓' : '小测待完成';
+      dom.levelQuizStatus.dataset.tone = activeFlags.quizCorrect ? 'passed' : 'neutral';
+    }
+
+    document.querySelectorAll('.level-panel').forEach((panel) => {
+      panel.hidden = panel.dataset.panel !== active;
+    });
+
+    renderExamplePanel();
+    renderInvariantPanel();
+    renderBoundaryPanel();
+    renderDuplicatesPanel();
+    renderThresholdPanel();
+    syncQuizSolvedState();
+    updateLevelActions();
+  }
+
+  function renderInvariantPanel() {
+    const flags = mergeLevelFlags('invariant');
+    const playing = Boolean(ui.game) && ui.game.status === 'playing' && !ui.demo.active;
+
+    if (!playing) {
+      ui.levels.invariant.promptOpen = false;
+      ui.levels.invariant.answered = false;
+    }
+
+    const streak = flags.quizCorrect ? 3 : Math.min(3, ui.levels.invariant.streak);
+    dom.invariantStreak.textContent = `连续 ${streak} / 3`;
+    dom.invariantStreak.classList.toggle('is-complete', flags.quizCorrect);
+    dom.invariantPrompt.hidden = !(ui.levels.invariant.promptOpen && ui.levels.active === 'invariant' && playing);
+
+    if (flags.quizCorrect) {
+      dom.invariantHint.textContent = '小测已达标。继续练习也可以，本局结束后记录通过。';
+    } else if (playing) {
+      dom.invariantHint.textContent = '等待一次合法错误猜测；开始新一局会隐藏当前校验。';
+    } else {
+      dom.invariantHint.textContent = '开始一局，再故意猜错一次，就会出现新区间校验。';
+    }
+  }
+
+  function renderBoundaryPanel() {
+    const hasResult = Boolean(ui.levels.boundary.result);
+    dom.boundaryOutput.hidden = !hasResult;
+    dom.boundaryRun.textContent = hasResult ? '重新运行' : '运行到卡住';
+
+    const bugLine = document.querySelector('.buggy-line[data-bug-line]');
+    if (bugLine) {
+      bugLine.classList.toggle('is-revealed', mergeLevelFlags('boundary').quizCorrect);
+    }
+  }
+
+  // =========================================================
+  // 关卡 05 · 重复元素（先找位置，再揭晓 lower_bound / upper_bound）
+  // =========================================================
+
+  function handleDuplicatesSetupClick(event) {
+    const targetButton = event.target.closest('[data-bound-target]');
+    const modeButton = event.target.closest('[data-bound-mode]');
+    if (!targetButton && !modeButton) return;
+
+    const view = ui.levels.duplicates;
+    if (targetButton) view.target = Number(targetButton.dataset.boundTarget);
+    if (modeButton) view.mode = modeButton.dataset.boundMode === 'last' ? 'last' : 'first';
+
+    resetDuplicatesWalkthrough();
+  }
+
+  function resetDuplicatesWalkthrough() {
+    const view = ui.levels.duplicates;
+    stopDuplicatesAuto();
+    view.state = ENGINE.createBoundState(DUPLICATE_VALUES.slice(), view.target, view.mode);
+
+    if (!mergeLevelFlags('duplicates').quizCorrect) {
+      setQuizFeedback('duplicates', 'neutral', '先走完一遍，再作答。');
+    }
+
+    renderLevels();
+    announce(`已重置为「${duplicatesPlainLabel(view)}」。`);
+  }
+
+  function stepDuplicates(auto = false) {
+    const view = ui.levels.duplicates;
+    const state = view.state;
+    if (!state) return;
+
+    if (state.status === 'done') {
+      stopDuplicatesAuto();
+      renderLevels();
+      return;
+    }
+
+    if (!auto) stopDuplicatesAuto();
+
+    const result = ENGINE.stepBound(state);
+    view.state = result.state;
+
+    if (result.done) {
+      stopDuplicatesAuto();
+      if (!mergeLevelFlags('duplicates').quizCorrect) {
+        setQuizFeedback('duplicates', 'neutral', '走完一遍了，现在可以作答。');
+      }
+      if (result.state.found) {
+        recordLevelResult('duplicates', { passed: true });
+      } else {
+        renderLevels();
+      }
+      announce(result.state.found
+        ? `完成：${duplicatesPlainLabel(view)}，结果下标是 ${result.state.index}。`
+        : `演示完成：没有找到 ${view.target}。`);
+      return;
+    }
+
+    if (auto && view.auto) scheduleDuplicatesStep();
+    renderLevels();
+  }
+
+  function toggleDuplicatesAuto() {
+    const view = ui.levels.duplicates;
+    if (!view.state || view.state.status === 'done') return;
+
+    view.auto = !view.auto;
+
+    if (view.auto) {
+      scheduleDuplicatesStep();
+      announce('重复元素 · 测试运行中。');
+    } else {
+      window.clearTimeout(ui.timers.duplicates);
+      announce('重复元素 · 测试已暂停。');
+    }
+
+    renderLevels();
+  }
+
+  function scheduleDuplicatesStep() {
+    window.clearTimeout(ui.timers.duplicates);
+    ui.timers.duplicates = window.setTimeout(() => {
+      if (!ui.levels.duplicates.auto) return;
+      stepDuplicates(true);
+    }, reduceMotion ? 300 : 900);
+  }
+
+  function stopDuplicatesAuto() {
+    ui.levels.duplicates.auto = false;
+    window.clearTimeout(ui.timers.duplicates);
+  }
+
+  function duplicatesPlainLabel(view = ui.levels.duplicates) {
+    return `${view.mode === 'first' ? '找第一个' : '找最后一个'} ${view.target}`;
+  }
+
+  function renderDuplicatesPanel() {
+    if (!dom.duplicatesArray) return;
+
+    const view = ui.levels.duplicates;
+    const state = view.state;
+    if (!state) return;
+
+    const done = state.status === 'done';
+    const compareEvents = state.events.filter((event) => event.type === 'compare');
+
+    dom.duplicatesTitle.textContent = duplicatesPlainLabel(view);
+    dom.duplicatesQuizPrompt.textContent = `小测：命中 ${view.target} 后，为什么还要继续收缩区间？`;
+
+    dom.duplicatesTargetGroup.querySelectorAll('[data-bound-target]').forEach((button) => {
+      const active = Number(button.dataset.boundTarget) === view.target;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-pressed', String(active));
+    });
+    dom.duplicatesModeGroup.querySelectorAll('[data-bound-mode]').forEach((button) => {
+      const active = button.dataset.boundMode === view.mode;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-pressed', String(active));
+    });
+
+    renderBoundArray(state);
+
+    dom.duplicatesState.textContent = done
+      ? `low = ${state.low} · high = ${state.high} · 结果下标 = ${state.index}`
+      : `low = ${state.low} · high = ${state.high} · mid = ${state.mid === null ? '—' : state.mid}`;
+
+    dom.duplicatesDecision.textContent = duplicatesDecisionText(state, view);
+    renderWalkthroughSteps(dom.duplicatesSteps, compareEvents, renderDuplicatesStepBody, '还没有比较');
+    dom.duplicatesProgress.textContent = `${compareEvents.length} 步`;
+
+    dom.duplicatesNext.disabled = done;
+    dom.duplicatesNext.textContent = done ? '已完成' : '下一步';
+    dom.duplicatesAuto.disabled = done;
+    dom.duplicatesAuto.textContent = view.auto ? '暂停' : '运行测试';
+
+    dom.duplicatesResult.hidden = !done;
+    dom.duplicatesReveal.hidden = !done;
+
+    if (done) {
+      if (state.found) {
+        dom.duplicatesResultText.textContent = view.mode === 'last'
+          ? `找到最后一个 ${view.target}：下标 ${state.index}。upper_bound − 1 = ${state.index}。`
+          : `找到第一个 ${view.target}：下标 ${state.index}。`;
+        dom.duplicatesReveal.textContent = view.mode === 'last'
+          ? `技术名：upper_bound 是第一个 > ${view.target} 的位置 = ${state.low}；最后一个目标 = upper_bound − 1 = ${state.index}。`
+          : `技术名：lower_bound 是第一个 ≥ ${view.target} 的位置，结果下标 = ${state.index}。`;
+      } else {
+        dom.duplicatesResultText.textContent = `没有找到 ${view.target}。`;
+        dom.duplicatesReveal.textContent = `技术名：lower_bound 与 upper_bound 会落在同一个插入位置，区间为空。`;
+      }
+    } else {
+      dom.duplicatesResultText.textContent = '';
+      dom.duplicatesReveal.textContent = '';
+    }
+
+    syncWalkthroughQuizGate('duplicates', done);
+  }
+
+  function duplicatesDecisionText(state, view) {
+    if (state.status === 'done') {
+      if (!state.found) return `完成：数组里没有 ${view.target}。`;
+      return view.mode === 'last'
+        ? `完成：最后一个 ${view.target} 在索引 ${state.index}（upper_bound − 1）。`
+        : `完成：第一个 ${view.target} 在索引 ${state.index}。`;
+    }
+
+    if (state.status === 'ready') {
+      const mid = ENGINE.nextMid(state.low, state.high);
+      return `目标：${duplicatesPlainLabel(view)}。下一次 mid = ${mid}，点击「下一步」比较 a[${mid}]。`;
+    }
+
+    const event = state.events.filter((item) => item.type === 'compare').pop();
+    if (!event) return '点击「下一步」，比较一次 mid。';
+
+    const compare = view.mode === 'first'
+      ? (event.value < state.target ? `a[${event.mid}] = ${event.value} < ${state.target}` : `a[${event.mid}] = ${event.value} ≥ ${state.target}`)
+      : (event.value <= state.target ? `a[${event.mid}] = ${event.value} ≤ ${state.target}` : `a[${event.mid}] = ${event.value} > ${state.target}`);
+    const decision = event.decision === 'right'
+      ? `low = mid + 1 = ${event.newLow}`
+      : `high = mid = ${event.newHigh}`;
+
+    return `${compare} → ${decision} · 新区间 [${event.newLow}, ${event.newHigh}]`;
+  }
+
+  function renderBoundArray(state) {
+    dom.duplicatesArray.replaceChildren();
+
+    const fragment = document.createDocumentFragment();
+    state.values.forEach((value, index) => {
+      const cell = document.createElement('div');
+      cell.className = 'bound-cell';
+      const inRange = index >= state.low && index <= state.high;
+      const done = state.status === 'done';
+
+      cell.classList.toggle('is-in-range', inRange && !done);
+      cell.classList.toggle('is-out', !inRange || done);
+      if (done) {
+        if (index === state.index) cell.classList.add('is-answer');
+      } else if (index === state.mid) {
+        cell.classList.add('is-mid');
+      }
+
+      const valueNode = document.createElement('strong');
+      valueNode.textContent = String(value);
+      const indexNode = document.createElement('small');
+      indexNode.textContent = String(index);
+      cell.append(valueNode, indexNode);
+
+      const tags = [];
+      if (done) {
+        if (index === state.index) tags.push({ label: '结果', tone: 'answer' });
+      } else {
+        if (index === state.low) tags.push({ label: 'low', tone: 'low' });
+        if (index === state.high) tags.push({ label: 'high', tone: 'high' });
+        if (index === state.mid) tags.push({ label: 'mid', tone: 'mid' });
+      }
+
+      if (tags.length) {
+        const tagWrap = document.createElement('span');
+        tagWrap.className = 'bound-cell-tags';
+        tags.forEach((tag) => {
+          const tagNode = document.createElement('span');
+          tagNode.className = `bound-cell-tag is-${tag.tone}`;
+          tagNode.textContent = tag.label;
+          tagWrap.appendChild(tagNode);
+        });
+        cell.appendChild(tagWrap);
+      }
+
+      cell.setAttribute('aria-label', `下标 ${index}，值 ${value}${tags.length ? `，${tags.map((tag) => tag.label).join('、')}` : ''}`);
+      fragment.appendChild(cell);
+    });
+
+    dom.duplicatesArray.appendChild(fragment);
+  }
+
+  function renderDuplicatesStepBody(body, event) {
+    const mid = document.createElement('b');
+    mid.textContent = `mid ${event.mid}`;
+    const compare = document.createElement('span');
+    compare.textContent = ui.levels.duplicates.mode === 'first'
+      ? ` · a[${event.mid}] = ${event.value} ${event.value < ui.levels.duplicates.target ? '<' : '≥'} ${ui.levels.duplicates.target}`
+      : ` · a[${event.mid}] = ${event.value} ${event.value <= ui.levels.duplicates.target ? '≤' : '>'} ${ui.levels.duplicates.target}`;
+    const decision = document.createElement('span');
+    decision.className = 'walkthrough-inline-decision';
+    decision.textContent = event.decision === 'right'
+      ? ` → low = mid + 1 = ${event.newLow}`
+      : ` → high = mid = ${event.newHigh}`;
+    const range = document.createElement('span');
+    range.className = 'level-step-range';
+    range.textContent = ` · [${event.newLow}, ${event.newHigh}]`;
+
+    body.append(mid, compare, decision, range);
+  }
+
+  // =========================================================
+  // 关卡 06 · 最小电量（先体验单调谓词，再揭晓二分答案）
+  // =========================================================
+
+  function resetThresholdWalkthrough() {
+    const view = ui.levels.threshold;
+    stopThresholdAuto();
+    view.state = ENGINE.createPredicateState(THRESHOLD_CONFIG);
+
+    if (!mergeLevelFlags('threshold').quizCorrect) {
+      setQuizFeedback('threshold', 'neutral', '先走完一遍，再作答。');
+    }
+
+    renderLevels();
+    announce('已重置最小电量演示。');
+  }
+
+  function stepThreshold(auto = false) {
+    const view = ui.levels.threshold;
+    const state = view.state;
+    if (!state) return;
+
+    if (state.status === 'done') {
+      stopThresholdAuto();
+      renderLevels();
+      return;
+    }
+
+    if (!auto) stopThresholdAuto();
+
+    const result = ENGINE.stepPredicate(state);
+    view.state = result.state;
+
+    if (result.done) {
+      stopThresholdAuto();
+      if (!mergeLevelFlags('threshold').quizCorrect) {
+        setQuizFeedback('threshold', 'neutral', '走完一遍了，现在可以作答。');
+      }
+      recordLevelResult('threshold', { passed: true });
+      announce(`完成：最小可用容量是 ${result.state.answer}。`);
+      return;
+    }
+
+    if (auto && view.auto) scheduleThresholdStep();
+    renderLevels();
+  }
+
+  function toggleThresholdAuto() {
+    const view = ui.levels.threshold;
+    if (!view.state || view.state.status === 'done') return;
+
+    view.auto = !view.auto;
+
+    if (view.auto) {
+      scheduleThresholdStep();
+      announce('最小电量 · 测试运行中。');
+    } else {
+      window.clearTimeout(ui.timers.threshold);
+      announce('最小电量 · 测试已暂停。');
+    }
+
+    renderLevels();
+  }
+
+  function scheduleThresholdStep() {
+    window.clearTimeout(ui.timers.threshold);
+    ui.timers.threshold = window.setTimeout(() => {
+      if (!ui.levels.threshold.auto) return;
+      stepThreshold(true);
+    }, reduceMotion ? 300 : 900);
+  }
+
+  function stopThresholdAuto() {
+    ui.levels.threshold.auto = false;
+    window.clearTimeout(ui.timers.threshold);
+  }
+
+  function renderThresholdPanel() {
+    if (!dom.thresholdQuestion) return;
+
+    const view = ui.levels.threshold;
+    const state = view.state;
+    if (!state) return;
+
+    const done = state.status === 'done';
+    const tests = state.events.filter((event) => event.type === 'test');
+    const last = tests[tests.length - 1];
+
+    dom.thresholdLow.textContent = String(state.low);
+    dom.thresholdHigh.textContent = String(state.high);
+    dom.thresholdMid.textContent = done || state.mid === null ? '—' : String(state.mid);
+
+    if (done) {
+      dom.thresholdQuestion.textContent = `最小可用容量 = ${state.answer}`;
+      dom.thresholdAnswer.textContent = '已找到';
+      dom.thresholdAnswer.dataset.tone = 'pass';
+      dom.thresholdAsk.dataset.tone = 'pass';
+      dom.thresholdDecision.textContent = `区间收敛到 low = high = ${state.answer}，这就是最小可用容量。`;
+    } else if (last) {
+      dom.thresholdQuestion.textContent = `容量 ${last.mid} 能撑过 8 小时吗？`;
+      dom.thresholdAnswer.textContent = last.passes ? '能 ✓' : '不能 ✗';
+      dom.thresholdAnswer.dataset.tone = last.passes ? 'pass' : 'fail';
+      dom.thresholdAsk.dataset.tone = last.passes ? 'pass' : 'fail';
+      dom.thresholdDecision.textContent = last.passes
+        ? `能撑过 ✓ → high = mid = ${last.newHigh}，保留更小的可行容量 · 新区间 [${last.newLow}, ${last.newHigh}]`
+        : `撑不过 ✗ → low = mid + 1 = ${last.newLow}，排除这个容量及更小的 · 新区间 [${last.newLow}, ${last.newHigh}]`;
+    } else {
+      dom.thresholdQuestion.textContent = '容量 ? 能撑过 8 小时吗？';
+      dom.thresholdAnswer.textContent = '待询问';
+      dom.thresholdAnswer.dataset.tone = 'idle';
+      dom.thresholdAsk.dataset.tone = 'idle';
+      dom.thresholdDecision.textContent = '点击「下一步」，问一次中点容量。';
+    }
+
+    renderWalkthroughSteps(dom.thresholdSteps, tests, renderThresholdStepBody, '还没有询问');
+    dom.thresholdProgress.textContent = `${tests.length} 次询问`;
+
+    dom.thresholdNext.disabled = done;
+    dom.thresholdNext.textContent = done ? '已完成' : '下一步';
+    dom.thresholdAuto.disabled = done;
+    dom.thresholdAuto.textContent = view.auto ? '暂停' : '运行测试';
+
+    dom.thresholdResult.hidden = !done;
+    dom.thresholdReveal.hidden = !done;
+
+    if (done) {
+      dom.thresholdResultText.textContent = `最小可用容量 = ${state.answer}`;
+      dom.thresholdReveal.textContent = '为什么能二分？因为“容量越大越容易撑过 8 小时”是单调的 → 单调谓词 → 二分答案。';
+    } else {
+      dom.thresholdResultText.textContent = '';
+      dom.thresholdReveal.textContent = '';
+    }
+
+    syncWalkthroughQuizGate('threshold', done);
+  }
+
+  function renderThresholdStepBody(body, event) {
+    const mid = document.createElement('b');
+    mid.textContent = `x ${event.mid}`;
+    const compare = document.createElement('span');
+    compare.textContent = ' · 能撑过 8 小时？';
+    const answer = document.createElement('span');
+    answer.className = `walkthrough-answer is-${event.passes ? 'pass' : 'fail'}`;
+    answer.textContent = event.passes ? '能 ✓' : '不能 ✗';
+    const decision = document.createElement('span');
+    decision.className = 'walkthrough-inline-decision';
+    decision.textContent = event.passes
+      ? ` → high = mid = ${event.newHigh}`
+      : ` → low = mid + 1 = ${event.newLow}`;
+    const range = document.createElement('span');
+    range.className = 'level-step-range';
+    range.textContent = ` · [${event.newLow}, ${event.newHigh}]`;
+
+    body.append(mid, compare, answer, decision, range);
+  }
+
+  // =========================================================
+  // 通用步进渲染与小测门控
+  // =========================================================
+
+  function renderWalkthroughSteps(list, events, bodyBuilder, emptyText) {
+    if (!list) return;
+
+    list.replaceChildren();
+    if (!events.length) {
+      const empty = document.createElement('li');
+      empty.className = 'level-step-empty';
+      empty.textContent = emptyText;
+      list.appendChild(empty);
+      return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    events.forEach((event, index) => {
+      const item = document.createElement('li');
+      item.className = 'level-step';
+      if (event.passes === true) item.classList.add('is-pass');
+      if (event.passes === false) item.classList.add('is-fail');
+
+      const number = document.createElement('span');
+      number.className = 'level-step-no';
+      number.textContent = `#${index + 1}`;
+
+      const body = document.createElement('span');
+      body.className = 'level-step-body';
+      bodyBuilder(body, event);
+
+      item.append(number, body);
+      fragment.appendChild(item);
+    });
+
+    list.appendChild(fragment);
+    list.scrollTop = list.scrollHeight;
+  }
+
+  function getWalkthroughStatus(levelId) {
+    const view = levelId === 'duplicates' ? ui.levels.duplicates : ui.levels.threshold;
+    return view.state ? view.state.status : 'ready';
+  }
+
+  function syncWalkthroughQuizGate(levelId, done) {
+    const config = getQuizConfig(levelId);
+    if (!config || !config.container) return;
+    if (mergeLevelFlags(levelId).quizCorrect) return;
+
+    config.container.querySelectorAll('.quiz-option').forEach((button) => {
+      button.disabled = !done;
+    });
+  }
+
+  function updateLevelActions() {
+    const playing = Boolean(ui.game) && ui.game.status === 'playing';
+    const demoPlaying = playing && ui.demo.active;
+
+    dom.exampleStart.disabled = demoPlaying;
+    dom.exampleStart.textContent = demoPlaying ? '演示中…' : ui.demo.done ? '重新演示' : '开始演示';
+    dom.exampleNext.disabled = !demoPlaying || ui.demo.index >= ui.demo.events.length;
+    dom.exampleAuto.disabled = !demoPlaying;
+    dom.exampleAuto.textContent = ui.demo.auto ? '暂停自动' : '自动演示';
+
+    dom.midpointStart.disabled = playing && !demoPlaying;
+    dom.midpointStart.textContent = demoPlaying ? '结束演示并开局' : playing ? '本局进行中' : '开始一局';
+
+    dom.invariantStart.disabled = playing && !demoPlaying;
+    dom.invariantStart.textContent = demoPlaying ? '结束演示并开局' : playing ? '本局进行中' : '开始一局';
+  }
+
+  function handleLevelGuess(eventData, state) {
+    if (ui.demo.active) return;
+
+    if (state.status !== 'playing') {
+      ui.levels.invariant.promptOpen = false;
+      ui.levels.invariant.answered = false;
+
+      if (state.status === 'defused') {
+        recordLevelResult('midpoint', { passed: true });
+        if (ui.levels.active === 'midpoint' && !mergeLevelFlags('midpoint').quizCorrect) {
+          setQuizFeedback('midpoint', 'correct', '拆弹成功！再答对小测即可点亮掌握徽章。');
+        }
+      }
+
+      if (ui.levels.active === 'invariant') {
+        recordLevelResult('invariant', { passed: true });
+      }
+
+      renderLevels();
+      return;
+    }
+
+    if (ui.levels.active === 'invariant' && eventData && eventData.feedback !== 'hit') {
+      showInvariantPrompt();
+    }
+  }
+
+  // =========================================================
   // 回合流程
   // =========================================================
 
-  function startRound() {
-    if (ui.game && ui.game.status === 'playing' && !ui.navigationPending) return;
+  function startRound(options) {
+    const demoMode = Boolean(options && options.demo === true);
+    const requestedSecret = options && Number.isInteger(options.secret) ? options.secret : null;
+
+    if (!demoMode && ui.game && ui.game.status === 'playing' && !ui.navigationPending && !ui.demo.active) return;
 
     clearTimers();
     hideBombResult();
@@ -310,11 +1772,13 @@
       dom.switchDialog.close('restart');
     }
 
-    let nextState = ENGINE.createState();
-    let retry = 0;
-    while (ui.game && nextState.secret === ui.game.secret && retry < 3) {
-      nextState = ENGINE.createState();
-      retry += 1;
+    let nextState = ENGINE.createState(requestedSecret === null ? undefined : requestedSecret);
+    if (!demoMode) {
+      let retry = 0;
+      while (ui.game && nextState.secret === ui.game.secret && retry < 3) {
+        nextState = ENGINE.createState();
+        retry += 1;
+      }
     }
 
     ui.game = nextState;
@@ -326,6 +1790,16 @@
     ui.pendingHref = null;
     ui.switchConfirmed = false;
     ui.lastCut = null;
+    ui.demo = {
+      active: demoMode,
+      auto: false,
+      index: 0,
+      total: 0,
+      events: [],
+      done: false
+    };
+    ui.levels.invariant.promptOpen = false;
+    ui.levels.invariant.answered = false;
 
     dom.guessInput.value = '';
     dom.predictInput.value = '';
@@ -333,15 +1807,24 @@
     dom.predictionCard.classList.remove('is-correct', 'is-wrong', 'is-shaking');
     dom.bombCard.classList.remove('is-critical', 'is-detonating');
     dom.screenFlash.classList.remove('is-active');
+    dom.invariantPrompt.hidden = true;
 
     setBombStatus('armed', '拆弹中');
-    setFeedback('neutral', '训练模式启动：没有倒计时。先预测下一次 mid，再提交你的猜测。');
-    dom.bombLead.textContent = '每次合法错误猜测剪断一根线。在 7 根线用完前锁定 1–100 中的密码。';
+    setFeedback('neutral', demoMode
+      ? '示例模式启动：密码固定为 62。'
+      : '训练模式启动：没有倒计时。先预测下一次 mid，再提交你的猜测。');
+    dom.bombLead.textContent = demoMode
+      ? '示例关卡：密码固定为 62。观察 mid 如何把候选区间不断减半。'
+      : '每次合法错误猜测剪断一根线。在 7 根线用完前锁定 1–100 中的密码。';
     resetPredictionForRound();
     renderAll();
 
-    announce(`新一局开始。密码已经锁定，你有 ${MAX_WIRES} 根拆弹线。`);
-    showToast(`训练模式启动 · ${MAX_WIRES} 根线就绪`, 'neutral');
+    announce(demoMode
+      ? '示例演示开始，密码固定为 62。'
+      : `新一局开始。密码已经锁定，你有 ${MAX_WIRES} 根拆弹线。`);
+    showToast(demoMode ? '示例演示 · secret 62' : `训练模式启动 · ${MAX_WIRES} 根线就绪`, 'neutral');
+
+    if (demoMode) return;
 
     window.requestAnimationFrame(() => {
       const promptRect = dom.predictionCard.getBoundingClientRect();
@@ -407,6 +1890,7 @@
     }
 
     renderAll();
+    handleLevelGuess(eventData, result.state);
 
     if (ui.lastCut !== null) {
       window.clearTimeout(ui.timers.cut);
@@ -573,7 +2057,6 @@
   // =========================================================
 
   function renderAll() {
-    renderMatrix();
     renderState();
     renderWires();
     renderHistory();
@@ -582,53 +2065,7 @@
     renderStats();
     renderPredictionControls();
     updateControls();
-  }
-
-  function renderMatrix() {
-    const game = ui.game;
-    const idle = !game;
-    const playing = Boolean(game) && game.status === 'playing';
-    const revealed = Boolean(game) && game.status !== 'playing';
-    const low = idle ? LOWER_BOUND : game.low;
-    const high = idle ? UPPER_BOUND : game.high;
-    const guesses = idle ? new Map() : new Map(game.guesses.map((guess) => [guess.value, guess.comparison]));
-    const lastGuess = idle ? null : game.lastGuess;
-    const target = revealed ? game.secret : null;
-
-    matrixCells.forEach((cell) => {
-      const value = Number(cell.dataset.value);
-      const inRange = value >= low && value <= high;
-      const guessed = guesses.has(value);
-      const isTarget = target !== null && value === target;
-      const isCandidate = idle || (playing && inRange && !guessed);
-      const isEliminated = !isTarget && !guessed && (idle ? false : (!playing || !inRange));
-
-      cell.classList.toggle('is-candidate', isCandidate);
-      cell.classList.toggle('is-eliminated', isEliminated);
-      cell.classList.toggle('is-guess', guessed && !isTarget);
-      cell.classList.toggle('is-last-guess', !isTarget && value === lastGuess);
-      cell.classList.toggle('is-target', isTarget);
-    });
-
-    dom.numberMatrix.dataset.outcome = idle ? 'idle' : game.status;
-
-    const remaining = idle
-      ? UPPER_BOUND - LOWER_BOUND + 1
-      : game.status === 'defused'
-        ? 1
-        : Math.max(0, high - low + 1);
-
-    let summary = `1 到 100 的排爆矩阵。当前候选区间 ${low} 到 ${high}，共 ${remaining} 个候选数字`;
-
-    if (game) {
-      summary += `。已经猜过 ${game.guesses.length} 个数字`;
-      if (game.status === 'defused') summary += `。拆弹成功，正确密码是 ${game.secret}`;
-      else if (game.status === 'exploded') summary += `。炸弹爆炸，正确密码是 ${game.secret}`;
-    } else {
-      summary += '。全部数字仍在候选中';
-    }
-
-    dom.numberMatrix.setAttribute('aria-label', summary);
+    renderLevels();
   }
 
   function renderState() {
@@ -671,20 +2108,13 @@
       dom.midFormulaCalc.textContent = `正确密码 ${game.secret} · 共 ${game.guesses.length} 次猜测`;
     }
 
-    dom.candidateBadge.classList.toggle('is-safe', Boolean(game) && game.status === 'defused');
-    dom.candidateBadge.classList.toggle('is-boom', Boolean(game) && game.status === 'exploded');
-
     if (idle) {
-      dom.candidateBadge.textContent = `候选 ${LOWER_BOUND}–${UPPER_BOUND}`;
       dom.guessHelp.textContent = '点击「开始拆弹」后开始。每轮先预测，再猜测。';
     } else if (playing) {
-      dom.candidateBadge.textContent = `候选 ${low}–${high}`;
       dom.guessHelp.textContent = `当前候选区间 ${low}–${high}，共 ${remaining} 个数字。下一次 mid = ${mid}。`;
     } else if (game.status === 'defused') {
-      dom.candidateBadge.textContent = `已锁定 ${game.secret}`;
       dom.guessHelp.textContent = `密码 ${game.secret} 已确认，共 ${game.guesses.length} 次猜测。`;
     } else {
-      dom.candidateBadge.textContent = `密码 ${game.secret}`;
       dom.guessHelp.textContent = `密码是 ${game.secret}，7 根线已经耗尽。`;
     }
   }
@@ -830,27 +2260,29 @@
   function renderPredictionControls() {
     const playing = Boolean(ui.game) && ui.game.status === 'playing' && !ui.navigationPending;
     const locked = ui.prediction.locked;
+    const demoLocked = ui.demo.active;
 
-    dom.predictInput.disabled = !playing || locked;
-    dom.predictSubmit.disabled = !playing || locked;
-    dom.predictionCard.classList.toggle('is-locked', locked);
+    dom.predictInput.disabled = !playing || locked || demoLocked;
+    dom.predictSubmit.disabled = !playing || locked || demoLocked;
+    dom.predictionCard.classList.toggle('is-locked', locked || demoLocked);
     dom.predictionCard.classList.toggle('is-idle', !ui.game);
   }
 
   function updateControls() {
     const playing = Boolean(ui.game) && ui.game.status === 'playing';
     const blocked = ui.navigationPending;
+    const demoPlaying = playing && ui.demo.active;
     const locked = playing || ui.resultOpen || ui.resultPending || ui.navigationPending;
-    const canInput = playing && !blocked;
+    const canInput = playing && !blocked && !demoPlaying;
 
-    dom.startBombBtn.disabled = locked;
+    dom.startBombBtn.disabled = ui.navigationPending || (locked && !demoPlaying);
     dom.guessInput.disabled = !canInput;
     dom.guessSubmit.disabled = !canInput;
 
     if (ui.navigationPending) {
       dom.startBombLabel.textContent = '正在切换…';
     } else if (playing) {
-      dom.startBombLabel.textContent = '拆弹中…';
+      dom.startBombLabel.textContent = demoPlaying ? '结束演示并开局' : '拆弹中…';
     } else if (ui.resultOpen || ui.resultPending) {
       dom.startBombLabel.textContent = '本局结束';
     } else if (!ui.game) {
@@ -1024,25 +2456,664 @@
   }
 
   // =========================================================
-  // 其他交互
+  // 角色反转 · 你当出题人
   // =========================================================
 
-  function handleMatrixClick(event) {
-    if (!(event.target instanceof Element)) return;
+  function initOracle() {
+    if (!dom.oracleDialog) return;
 
-    const cell = event.target.closest('.matrix-cell');
-    if (!cell || !ui.game || ui.game.status !== 'playing' || ui.navigationPending) return;
-
-    const value = Number(cell.dataset.value);
-    const eligible = value >= ui.game.low
-      && value <= ui.game.high
-      && !ui.game.guesses.some((guess) => guess.value === value);
-
-    if (!eligible) return;
-
-    dom.guessInput.value = String(value);
-    dom.guessInput.focus({ preventScroll: true });
+    fillQuizOptions(dom.oracleQuizQ1, ORACLE_QUIZ.q1.options);
+    fillQuizOptions(dom.oracleQuizQ2, ORACLE_QUIZ.q2.options);
+    resetOracleQuizUI();
+    syncOracleSecretFields(ui.oracle.secret);
+    renderOracle();
+    renderOracleMastery();
   }
+
+  function openOracleDialog() {
+    if (!dom.oracleDialog || dom.oracleDialog.open) return;
+
+    ui.oracle.open = true;
+    document.body.classList.add('bomb-modal-open');
+    renderOracle();
+    dom.oracleDialog.showModal();
+
+    window.requestAnimationFrame(() => {
+      if (ui.oracle.status === 'playing') {
+        dom.oracleAnswerHigh.focus({ preventScroll: true });
+      } else if (ui.oracle.status === 'done') {
+        dom.oracleEndSection.focus({ preventScroll: true });
+      } else {
+        dom.oracleSecretInput.focus({ preventScroll: true });
+        dom.oracleSecretInput.select();
+      }
+    });
+  }
+
+  function closeOracleDialog() {
+    if (dom.oracleDialog && dom.oracleDialog.open) {
+      dom.oracleDialog.close('dismiss');
+    }
+  }
+
+  function handleOracleDialogClosed() {
+    ui.oracle.open = false;
+
+    if (dom.bombResultOverlay.hidden) {
+      document.body.classList.remove('bomb-modal-open');
+      dom.oracleOpenBtn.focus({ preventScroll: true });
+    }
+  }
+
+  function handleOracleSecretInput() {
+    if (ui.oracle.status === 'playing') return;
+
+    const value = Number(dom.oracleSecretInput.value);
+    if (Number.isInteger(value) && value >= LOWER_BOUND && value <= UPPER_BOUND) {
+      dom.oracleSecretRange.value = String(value);
+      // 已完成的一局保留原 secret 供决策树复盘；输入框里的值只作为下一局的草稿。
+      if (ui.oracle.status === 'ready') ui.oracle.secret = value;
+      hideOracleError();
+    }
+  }
+
+  function handleOracleSecretRange() {
+    if (ui.oracle.status === 'playing') return;
+
+    const value = Number(dom.oracleSecretRange.value);
+    if (!Number.isInteger(value)) return;
+    dom.oracleSecretInput.value = String(value);
+    if (ui.oracle.status === 'ready') ui.oracle.secret = value;
+    hideOracleError();
+  }
+
+  function syncOracleSecretFields(value) {
+    if (dom.oracleSecretInput) dom.oracleSecretInput.value = String(value);
+    if (dom.oracleSecretRange) dom.oracleSecretRange.value = String(value);
+  }
+
+  function showOracleError(message) {
+    dom.oracleSecretError.textContent = message;
+    dom.oracleSecretError.hidden = false;
+  }
+
+  function hideOracleError() {
+    dom.oracleSecretError.hidden = true;
+    dom.oracleSecretError.textContent = '';
+  }
+
+  function resetOracleQuizUI() {
+    [dom.oracleQuizQ1, dom.oracleQuizQ2].forEach((container) => {
+      if (!container) return;
+      container.dataset.solved = 'false';
+      container.querySelectorAll('.quiz-option').forEach((button) => {
+        button.disabled = false;
+        button.classList.remove('is-correct', 'is-wrong');
+      });
+    });
+
+    setOracleQuizFeedback('q1', 'neutral', '选一个最接近的答案。');
+    setOracleQuizFeedback('q2', 'neutral', '选一个最接近的答案。');
+    dom.oracleQuizResult.hidden = true;
+    dom.oracleQuizResult.textContent = '';
+    dom.oracleQuizResult.dataset.tone = 'neutral';
+  }
+
+  function startOracleSession() {
+    const value = Number(dom.oracleSecretInput.value);
+
+    if (!Number.isInteger(value) || value < LOWER_BOUND || value > UPPER_BOUND) {
+      showOracleError(`请输入 ${LOWER_BOUND}–${UPPER_BOUND} 之间的整数。`);
+      dom.oracleSecretInput.focus({ preventScroll: true });
+      dom.oracleSecretInput.select();
+      return;
+    }
+
+    hideOracleError();
+
+    const state = ui.oracle;
+    state.status = 'playing';
+    state.secret = value;
+    state.low = LOWER_BOUND;
+    state.high = UPPER_BOUND;
+    state.guess = ENGINE.nextMid(LOWER_BOUND, UPPER_BOUND);
+    state.step = 0;
+    state.guesses = [];
+    state.inconsistent = false;
+    state.endReason = null;
+    state.quiz = { q1: false, q2: false, recorded: false };
+
+    syncOracleSecretFields(value);
+    resetOracleQuizUI();
+    renderOracle();
+
+    announce(`角色反转开始。电脑不读取 secret，只会用中点公式，第一次猜 ${state.guess}。`);
+    dom.oracleAnswerHigh.focus({ preventScroll: true });
+  }
+
+  function submitOracleAnswer(answer) {
+    const state = ui.oracle;
+    if (state.status !== 'playing' || state.guess === null) return;
+
+    const mid = state.guess;
+    const intervalLow = state.low;
+    const intervalHigh = state.high;
+    const consistent = oracleAnswerMatches(answer, mid, state.secret);
+
+    let newLow = intervalLow;
+    let newHigh = intervalHigh;
+
+    if (answer === 'high') {
+      newHigh = mid - 1;
+    } else if (answer === 'low') {
+      newLow = mid + 1;
+    }
+
+    state.step += 1;
+    state.guesses.push({
+      mid,
+      low: intervalLow,
+      high: intervalHigh,
+      answer,
+      newLow,
+      newHigh,
+      consistent
+    });
+
+    if (!consistent) {
+      state.inconsistent = true;
+      announce('注意：裁判不一致。你的回答与 secret 不符，secret 可能被排除出候选区间，二分可能找不到它。');
+    }
+
+    if (answer === 'hit') {
+      state.endReason = 'hit';
+      finishOracleSession();
+      return;
+    }
+
+    state.low = newLow;
+    state.high = newHigh;
+
+    if (newLow > newHigh) {
+      state.endReason = 'empty';
+      finishOracleSession();
+      return;
+    }
+
+    if (state.step >= ORACLE_MAX_STEPS) {
+      state.endReason = 'limit';
+      finishOracleSession();
+      return;
+    }
+
+    // 下一次猜测只来自区间，不读取 secret。
+    state.guess = ENGINE.nextMid(state.low, state.high);
+    renderOracle();
+
+    if (consistent) {
+      announce(`第 ${state.step} 次猜 ${mid}，你回答「${oracleAnswerLabel(answer)}」，新区间 [${state.low}, ${state.high}]。电脑下一次猜 ${state.guess}。`);
+    } else {
+      announce(`裁判不一致后继续。电脑下一次只会按区间猜 ${state.guess}。`);
+    }
+  }
+
+  function oracleAnswerMatches(answer, mid, secret) {
+    if (answer === 'hit') return mid === secret;
+    if (answer === 'high') return mid > secret;
+    return mid < secret;
+  }
+
+  function oracleAnswerLabel(answer) {
+    if (answer === 'high') return '太大';
+    if (answer === 'low') return '太小';
+    return '命中';
+  }
+
+  function finishOracleSession() {
+    const state = ui.oracle;
+    state.status = 'done';
+    state.guess = null;
+    renderOracle();
+
+    const summary = oracleResultSummary(state);
+    announce(summary);
+
+    window.requestAnimationFrame(() => {
+      if (dom.oracleEndSection.hidden) return;
+      dom.oracleEndSection.focus({ preventScroll: true });
+      dom.oracleEndSection.scrollIntoView({
+        behavior: reduceMotion ? 'auto' : 'smooth',
+        block: 'start'
+      });
+    });
+  }
+
+  function oracleResultSummary(state) {
+    if (state.endReason === 'hit' && !state.inconsistent) {
+      return `公平命中！电脑用 ${state.guesses.length} 次猜中 ${state.secret}，路径见决策树。`;
+    }
+
+    if (state.endReason === 'hit') {
+      return `本局结束。你宣布命中，但真实 secret 是 ${state.secret}，裁判不一致。`;
+    }
+
+    if (state.endReason === 'empty') {
+      return `本局结束。区间已为空，二分找不到 secret ${state.secret}，裁判出现不一致。`;
+    }
+
+    return `本局结束。${ORACLE_MAX_STEPS} 次猜测用尽仍未命中，secret 是 ${state.secret}。`;
+  }
+
+  function setOracleConsistency(tone, text) {
+    if (!dom.oracleConsistency) return;
+    dom.oracleConsistency.dataset.tone = tone;
+    dom.oracleConsistency.textContent = text;
+  }
+
+  function renderOracle() {
+    if (!dom.oracleDialog) return;
+
+    const state = ui.oracle;
+    const playing = state.status === 'playing';
+    const done = state.status === 'done';
+    const started = playing || done;
+
+    dom.oracleRoundBadge.textContent = playing
+      ? `第 ${state.step + 1} / ${ORACLE_MAX_STEPS} 次`
+      : done
+        ? '本局结束'
+        : '等待开始';
+
+    dom.oracleGuessStage.dataset.state = state.status;
+    dom.oracleRangeBadge.textContent = state.low > state.high
+      ? '空区间 · low > high'
+      : `区间 [${state.low}, ${state.high}]`;
+    dom.oracleGuessValue.textContent = state.guess === null ? '—' : String(state.guess);
+
+    if (state.guess === null) {
+      dom.oracleGuessFormula.textContent = done
+        ? '本局已结束 · 见下方路径决策树'
+        : '电脑将在开始后取中点';
+    } else {
+      dom.oracleGuessFormula.textContent =
+        `nextMid(${state.low}, ${state.high}) = ${state.low} + ⌊(${state.high} − ${state.low}) / 2⌋ = ${state.guess}`;
+    }
+
+    if (!started) {
+      setOracleConsistency('idle', '等待开始');
+      dom.oraclePlayHint.textContent = '先设定 secret，再点「开始」。电脑第一次会猜 50。';
+    } else if (playing) {
+      setOracleConsistency(state.inconsistent ? 'warn' : 'ok', state.inconsistent ? '裁判不一致' : '裁判一致');
+      dom.oraclePlayHint.textContent = `电脑只看到区间，不看 secret。${state.guess} 和你的秘密数字相比，是太大、太小，还是命中？`;
+    } else {
+      setOracleConsistency(state.inconsistent ? 'warn' : 'ok', state.inconsistent ? '裁判不一致' : '裁判一致');
+      dom.oraclePlayHint.textContent = state.inconsistent
+        ? '本局出现过不一致回答，二分不再有保证。'
+        : '本局回答始终与 secret 一致。';
+    }
+
+    dom.oracleAnswerHigh.disabled = !playing;
+    dom.oracleAnswerHit.disabled = !playing;
+    dom.oracleAnswerLow.disabled = !playing;
+
+    dom.oracleSecretInput.disabled = playing;
+    dom.oracleSecretRange.disabled = playing;
+    dom.oracleStartBtn.textContent = playing ? '重新开始' : done ? '再来一局' : '开始';
+
+    dom.oracleConsistencyNote.hidden = !state.inconsistent;
+    if (state.inconsistent) {
+      dom.oracleConsistencyNote.textContent = '⚠ 裁判不一致：你的回答与 secret 不符，secret 可能已被排除，二分可能找不到它。';
+    }
+
+    renderOracleHistory();
+
+    dom.oracleEndSection.hidden = !done;
+    if (done) renderOracleEnd();
+
+    renderOracleMastery();
+  }
+
+  function renderOracleHistory() {
+    dom.oracleHistory.replaceChildren();
+
+    const guesses = ui.oracle.guesses;
+    dom.oracleHistoryCount.textContent = `${guesses.length} 次`;
+
+    if (guesses.length === 0) {
+      const empty = document.createElement('li');
+      empty.className = 'oracle-history-empty';
+      empty.textContent = '还没有回答。';
+      dom.oracleHistory.appendChild(empty);
+      return;
+    }
+
+    const fragment = document.createDocumentFragment();
+
+    guesses.forEach((guess, index) => {
+      const item = document.createElement('li');
+      item.className = 'oracle-history-row';
+      if (!guess.consistent) item.classList.add('is-inconsistent');
+
+      const order = document.createElement('span');
+      order.className = 'oracle-history-index';
+      order.textContent = String(index + 1).padStart(2, '0');
+
+      const mid = document.createElement('strong');
+      mid.className = 'oracle-history-mid';
+      mid.textContent = String(guess.mid);
+
+      const tag = document.createElement('span');
+      tag.className = `oracle-tag-${guess.answer}`;
+      tag.textContent = oracleAnswerLabel(guess.answer);
+
+      const range = document.createElement('span');
+      range.className = 'oracle-history-range';
+      range.textContent = guess.answer === 'hit'
+        ? '结束'
+        : guess.newLow > guess.newHigh
+          ? '→ 空区间'
+          : `→ [${guess.newLow}, ${guess.newHigh}]`;
+
+      item.append(order, mid, tag, range);
+
+      if (!guess.consistent) {
+        const flag = document.createElement('span');
+        flag.className = 'oracle-history-flag';
+        flag.textContent = '裁判不一致';
+        item.appendChild(flag);
+      }
+
+      fragment.appendChild(item);
+    });
+
+    dom.oracleHistory.appendChild(fragment);
+    dom.oracleHistory.scrollTop = dom.oracleHistory.scrollHeight;
+  }
+
+  function renderOracleEnd() {
+    const state = ui.oracle;
+    const guesses = state.guesses;
+    const last = guesses[guesses.length - 1] || null;
+    const fairHit = state.endReason === 'hit' && !state.inconsistent;
+
+    dom.oracleEndGuesses.textContent = String(guesses.length);
+    dom.oracleEndLayers.textContent = String(guesses.length);
+    dom.oracleEndConsistency.textContent = state.inconsistent ? '不一致' : '一致';
+    dom.oracleTreeMeta.textContent = `共 ${guesses.length} 层 · 最坏 7 次`;
+
+    if (fairHit) {
+      dom.oracleEndText.innerHTML =
+        `电脑第 ${guesses.length} 次猜中 <strong>${last.mid}</strong>；你的每次回答都与 secret 一致，这是一场公平对局。`;
+    } else if (state.endReason === 'hit') {
+      dom.oracleEndText.innerHTML =
+        `你宣布「命中」<strong>${last.mid}</strong>，但真实 secret 是 <strong>${state.secret}</strong>。裁判不一致，二分这次并没有真正找到。`;
+    } else if (state.endReason === 'empty') {
+      dom.oracleEndText.innerHTML =
+        `区间变成空区间（<strong>low &gt; high</strong>），二分无法继续；secret = <strong>${state.secret}</strong> 已被不一致的回答排除。`;
+    } else {
+      dom.oracleEndText.innerHTML =
+        `已用完 <strong>${ORACLE_MAX_STEPS}</strong> 次猜测仍未命中；裁判不一致让二分失去 7 次保证。secret = <strong>${state.secret}</strong>。`;
+    }
+
+    renderOracleTree();
+  }
+
+  function renderOracleTree() {
+    const state = ui.oracle;
+    dom.oracleTree.replaceChildren();
+
+    const fragment = document.createDocumentFragment();
+
+    state.guesses.forEach((guess, index) => {
+      const row = document.createElement('li');
+      row.className = 'oracle-tree-row';
+      if (!guess.consistent) row.classList.add('is-inconsistent');
+
+      const rail = document.createElement('div');
+      rail.className = 'oracle-tree-rail';
+      rail.setAttribute('aria-hidden', 'true');
+      const railNumber = document.createElement('span');
+      railNumber.textContent = String(index + 1);
+      rail.appendChild(railNumber);
+
+      const main = document.createElement('div');
+      main.className = 'oracle-tree-main';
+
+      const meta = document.createElement('div');
+      meta.className = 'oracle-tree-meta-row';
+      const layer = document.createElement('span');
+      layer.className = 'oracle-tree-layer';
+      layer.textContent = `第 ${index + 1} 层`;
+      const range = document.createElement('span');
+      range.className = 'oracle-tree-range';
+      range.textContent = `区间 [${guess.low}, ${guess.high}]`;
+
+      const tag = document.createElement('span');
+      tag.className = `oracle-tree-tag oracle-tag-${guess.answer}`;
+      tag.textContent = guess.answer === 'hit'
+        ? '命中'
+        : `${oracleAnswerLabel(guess.answer)} → ${guess.answer === 'high' ? '左' : '右'}`;
+
+      meta.append(layer, range, tag);
+
+      if (!guess.consistent) {
+        const flag = document.createElement('span');
+        flag.className = 'oracle-flag';
+        flag.textContent = '裁判不一致';
+        meta.appendChild(flag);
+      }
+
+      const branches = document.createElement('div');
+      branches.className = 'oracle-tree-branches';
+
+      const leftBranch = buildOracleBranch(
+        '太大',
+        oracleRangeLabel(guess.low, guess.mid - 1),
+        guess.answer === 'high' ? 'path' : 'ghost'
+      );
+
+      const node = document.createElement('div');
+      node.className = 'oracle-node';
+      if (guess.answer === 'hit') node.classList.add('is-hit');
+      if (guess.answer === 'hit' && !guess.consistent) node.classList.add('is-false');
+
+      const nodeMid = document.createElement('strong');
+      nodeMid.textContent = String(guess.mid);
+      const nodeCap = document.createElement('span');
+      nodeCap.textContent = guess.answer === 'hit' ? '命中' : 'mid';
+      node.append(nodeMid, nodeCap);
+
+      const rightBranch = buildOracleBranch(
+        '太小',
+        oracleRangeLabel(guess.mid + 1, guess.high),
+        guess.answer === 'low' ? 'path' : 'ghost'
+      );
+
+      branches.append(leftBranch, node, rightBranch);
+      main.append(meta, branches);
+      row.append(rail, main);
+      fragment.appendChild(row);
+    });
+
+    fragment.appendChild(buildOracleTerminal(state));
+    dom.oracleTree.appendChild(fragment);
+  }
+
+  function buildOracleBranch(label, rangeText, kind) {
+    const branch = document.createElement('div');
+    branch.className = `oracle-branch is-${kind}`;
+
+    const title = document.createElement('b');
+    title.textContent = label;
+    const range = document.createElement('span');
+    range.textContent = rangeText;
+
+    branch.append(title, range);
+    return branch;
+  }
+
+  function oracleRangeLabel(low, high) {
+    return low > high ? '空区间' : `[${low}, ${high}]`;
+  }
+
+  function buildOracleTerminal(state) {
+    const guesses = state.guesses;
+    const last = guesses[guesses.length - 1] || null;
+    const fairHit = state.endReason === 'hit' && !state.inconsistent;
+
+    const item = document.createElement('li');
+    item.className = 'oracle-tree-terminal';
+    item.dataset.tone = fairHit ? 'ok' : 'warn';
+
+    const rail = document.createElement('div');
+    rail.className = 'oracle-tree-rail';
+    rail.setAttribute('aria-hidden', 'true');
+    const icon = document.createElement('span');
+    icon.textContent = fairHit ? '✓' : '!';
+    rail.appendChild(icon);
+
+    const body = document.createElement('div');
+    body.className = 'oracle-tree-terminal-body';
+    const title = document.createElement('strong');
+    const detail = document.createElement('span');
+
+    if (fairHit) {
+      title.textContent = `命中 ${last.mid} · 公平对局`;
+      detail.textContent = `第 ${guesses.length} 层结束，secret = ${state.secret} 与命中值一致。`;
+    } else if (state.endReason === 'hit') {
+      title.textContent = '裁判宣称命中 · 不一致';
+      detail.textContent = `命中值是 ${last.mid}，但真实 secret = ${state.secret}；二分这次没有找到。`;
+    } else if (state.endReason === 'empty') {
+      title.textContent = '区间为空 · 无法继续';
+      detail.textContent = `最后一次收缩得到 [${state.low}, ${state.high}]（low > high）；secret = ${state.secret} 已被排除。`;
+    } else {
+      title.textContent = `${ORACLE_MAX_STEPS} 次用尽 · 未命中`;
+      detail.textContent = `裁判不一致时没有 7 次保证；真实 secret = ${state.secret}。`;
+    }
+
+    body.append(title, detail);
+    item.append(rail, body);
+    return item;
+  }
+
+  function handleOracleQuizClick(event) {
+    const button = event.target.closest('.quiz-option');
+    if (!button || button.disabled) return;
+
+    const block = button.closest('[data-oracle-quiz]');
+    if (!block || !dom.oracleQuiz.contains(block)) return;
+    if (ui.oracle.status !== 'done') return;
+
+    const key = block.dataset.oracleQuiz;
+    const config = ORACLE_QUIZ[key];
+    if (!config || ui.oracle.quiz[key]) return;
+
+    const option = config.options[Number(button.dataset.index)];
+    if (!option) return;
+
+    if (option.correct) {
+      ui.oracle.quiz[key] = true;
+      block.dataset.solved = 'true';
+      block.querySelectorAll('.quiz-option').forEach((item) => {
+        item.disabled = true;
+        item.classList.toggle('is-correct', item === button);
+      });
+      setOracleQuizFeedback(key, 'correct', `✓ 正确。${option.explain}`);
+
+      if (ui.oracle.quiz.q1 && ui.oracle.quiz.q2) completeOracleQuiz();
+    } else {
+      button.classList.add('is-wrong');
+      window.setTimeout(() => {
+        if (button.isConnected) button.classList.remove('is-wrong');
+      }, 800);
+      setOracleQuizFeedback(key, 'wrong', `✗ 再想想。${option.hint || ''}`);
+    }
+  }
+
+  function setOracleQuizFeedback(key, tone, text) {
+    const element = key === 'q2' ? dom.oracleQuizQ2Feedback : dom.oracleQuizQ1Feedback;
+    if (!element) return;
+    element.dataset.tone = tone;
+    element.textContent = text;
+  }
+
+  function completeOracleQuiz() {
+    const state = ui.oracle;
+    if (state.quiz.recorded) return;
+    state.quiz.recorded = true;
+
+    const passed = state.endReason === 'hit' && !state.inconsistent;
+    let stored = false;
+    let mastered = false;
+
+    try {
+      if (window.ProgressStore) {
+        window.ProgressStore.recordLevel('binary', 'oracle', { passed, quizCorrect: true });
+        stored = true;
+        const record = window.ProgressStore.getLevels('binary').oracle;
+        mastered = Boolean(record && record.passed && record.quizCorrect);
+      }
+    } catch {
+      stored = false;
+    }
+
+    let message;
+
+    if (!stored) {
+      message = '✓ 两题正确。本机存储不可用，本次仅在页面内生效。';
+    } else if (mastered) {
+      message = passed
+        ? '✓ 两题正确。ProgressStore 已记录 binary · oracle：公平命中 + 小测通过。'
+        : '✓ 两题正确。已记录小测；你此前已公平命中过，oracle 保持掌握。';
+    } else {
+      message = '✓ 两题正确。已记录小测；本局没有公平命中，passed 还没有点亮。再来一局诚实对局即可掌握。';
+    }
+
+    dom.oracleQuizResult.hidden = false;
+    dom.oracleQuizResult.dataset.tone = passed || mastered ? 'correct' : 'neutral';
+    dom.oracleQuizResult.textContent = message;
+
+    renderOracleMastery();
+    announce(passed
+      ? '角色反转小测通过，已记录本地进度。'
+      : '角色反转小测通过；本局未公平命中，掌握徽章尚未点亮。');
+  }
+
+  function renderOracleMastery() {
+    if (!dom.oracleMastery) return;
+
+    let record = null;
+    try {
+      record = window.ProgressStore
+        ? window.ProgressStore.getLevels('binary').oracle || null
+        : null;
+    } catch {
+      record = null;
+    }
+
+    let text = '本地记录 · 未开始';
+    let tone = 'idle';
+
+    if (record && record.passed && record.quizCorrect) {
+      text = '本地记录 · 已掌握';
+      tone = 'pass';
+    } else if (record && record.quizCorrect) {
+      text = '小测 ✓ · 待公平命中';
+      tone = 'quiz';
+    } else if (record && record.passed) {
+      text = '已通过 · 小测待完成';
+      tone = 'quiz';
+    } else if (record) {
+      text = '本地记录 · 练习中';
+    }
+
+    dom.oracleMastery.textContent = text;
+    dom.oracleMastery.dataset.state = tone;
+  }
+
+  // =========================================================
+  // 其他交互
+  // =========================================================
 
   function handleGlobalKeydown(event) {
     if (!ui.resultOpen) return;
@@ -1095,6 +3166,8 @@
       window.clearTimeout(ui.timers[key]);
       ui.timers[key] = 0;
     });
+    ui.levels.duplicates.auto = false;
+    ui.levels.threshold.auto = false;
   }
 
   function announce(message) {

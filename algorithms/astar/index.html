@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="A* 寻路实验室：先预测路径步数，再按事件单步验证语义视图。在 20×20 网格中绘制障碍，观察开放集、已扩展节点与最短路径，并查看 C++ / Java / Python / Go 源码解析。" />
+  <meta name="description" content="A* 寻路实验室：先预测路径步数，再按事件单步验证语义视图。在 20×20 网格中绘制障碍，观察开放集、已扩展节点与最短路径，对比 A* / BFS / Dijkstra 并完成三关练习，还可查看 C++ / Java / Python / Go 源码解析。" />
   <meta name="theme-color" content="#f4f8fd" />
   <title>寻路实验室 · A* 寻路</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23356df3'/%3E%3Cpath d='M8 23v-3a4 4 0 0 1 4-4h8a4 4 0 0 0 4-4V8' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3Ccircle cx='8' cy='23' r='2.4' fill='white'/%3E%3Ccircle cx='24' cy='8' r='2.4' fill='white'/%3E%3C/svg%3E" />
@@ -17,6 +17,55 @@
 
   <main class="app">
     <header id="siteHeader"></header>
+
+    <section class="mission-bar" aria-labelledby="levelTitle">
+      <h2 class="sr-only" id="levelTitle">关卡练习</h2>
+      <div class="mission-levels">
+        <p class="mission-eyebrow">MISSION <span>3 关 · 由易到难</span></p>
+        <div class="level-tabs" role="group" aria-label="选择 A* 关卡">
+          <button class="level-tab is-active" type="button" data-level="heuristic" aria-pressed="true">
+            <span class="level-step" aria-hidden="true">01</span>
+            <span class="level-tab-name">启发对比</span>
+            <span class="level-mastery" data-badge="heuristic" data-state="idle">未掌握</span>
+          </button>
+          <button class="level-tab" type="button" data-level="tiebreak" aria-pressed="false">
+            <span class="level-step" aria-hidden="true">02</span>
+            <span class="level-tab-name">平局打破</span>
+            <span class="level-mastery" data-badge="tiebreak" data-state="idle">未掌握</span>
+          </button>
+          <button class="level-tab" type="button" data-level="unreachable" aria-pressed="false">
+            <span class="level-step" aria-hidden="true">03</span>
+            <span class="level-tab-name">无路可达</span>
+            <span class="level-mastery" data-badge="unreachable" data-state="idle">未掌握</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="mission-current">
+        <div class="mission-current-head">
+          <p class="level-kicker" id="levelKicker">LEVEL 1 · HEURISTIC</p>
+          <p class="level-meta" id="levelMeta"></p>
+        </div>
+        <p class="level-goal" id="levelGoal">清空地图，起点 (3, 10)、终点 (16, 10)。比较 A* 与 BFS 的扩展节点数。</p>
+      </div>
+
+      <div class="mission-side">
+        <div class="mission-mastery">
+          <span>本关掌握度</span>
+          <strong id="levelMasteryText" data-state="idle">未掌握</strong>
+        </div>
+        <div class="mission-actions">
+          <button class="level-action level-action--primary" id="loadLevelBtn" type="button">载入关卡</button>
+          <button class="mission-detail-btn" id="levelDetailBtn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="levelDetailDrawer">
+            <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <path d="M4.4 4.6h11.2v8.3H9.8l-3.5 2.6v-2.6H4.4V4.6Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+              <path d="M7.2 7.8h5.6M7.2 10.2h3.8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+            </svg>
+            任务详情
+          </button>
+        </div>
+      </div>
+    </section>
 
     <div class="game-grid">
       <section class="card board-card" aria-labelledby="boardTitle">
@@ -53,6 +102,7 @@
                 <div><span>探索节点</span><strong id="resultExplored">0</strong></div>
                 <div><span>算法耗时</span><strong id="resultTime">0.00 ms</strong></div>
               </div>
+              <p class="result-style" id="resultStyle" hidden></p>
               <p class="result-prediction" id="resultPrediction" hidden></p>
               <p class="result-timers" id="resultTimers"></p>
               <button class="result-close" id="resultClose" type="button">
@@ -66,6 +116,11 @@
 
           <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
         </div>
+
+        <p class="decision-hint" id="decisionHint" data-state="idle">
+          <span class="decision-hint-icon" aria-hidden="true">f</span>
+          <span id="decisionHintText">开始寻路后，这里会解释开放集里谁最该先走。</span>
+        </p>
 
         <section class="playback-panel" id="playbackPanel" data-state="empty" data-view="semantic" aria-label="寻路事件回放">
           <div class="playback-head">
@@ -132,141 +187,8 @@
           </div>
         </section>
 
-        <footer class="board-footer">
-          <p class="tool-hint" id="boardHelp">
-            <span class="hint-dot" aria-hidden="true"></span>
-            <span id="hintText">按住左键拖拽绘制墙壁，右键可快速擦除。</span>
-          </p>
-          <div class="legend-panel">
-            <div class="view-switch" role="group" aria-label="探索视图模式">
-              <button class="view-btn is-active" id="semanticViewBtn" type="button" data-view="semantic" aria-pressed="true">语义视图</button>
-              <button class="view-btn" id="rainbowViewBtn" type="button" data-view="rainbow" aria-pressed="false">彩虹探索</button>
-            </div>
-            <div class="legend" id="semanticLegend" aria-label="语义视图图例">
-              <span><i class="swatch swatch--closed"></i>已扩展</span>
-              <span><i class="swatch swatch--open"></i>开放集</span>
-              <span><i class="swatch swatch--current"></i>当前节点</span>
-              <span><i class="swatch swatch--path"></i>路径</span>
-              <span><i class="swatch swatch--start"></i>起点</span>
-              <span><i class="swatch swatch--end"></i>终点</span>
-              <span><i class="swatch swatch--wall"></i>墙壁</span>
-            </div>
-            <div class="legend" id="rainbowLegend" aria-label="彩虹探索图例" hidden>
-              <span><i class="swatch swatch--start"></i>起点</span>
-              <span><i class="swatch swatch--end"></i>终点</span>
-              <span><i class="swatch swatch--wall"></i>墙壁</span>
-              <span class="legend-gradient" title="紫色最早探索，粉色最晚探索">探索顺序<em>早</em><i></i><em>晚</em></span>
-              <span><i class="swatch swatch--path"></i>最短路径</span>
-            </div>
-          </div>
-        </footer>
-      </section>
-
-      <aside class="sidebar">
-        <section class="card data-card" aria-labelledby="dataTitle">
-          <header class="panel-head">
-            <div class="section-title">
-              <span class="section-index" aria-hidden="true">02</span>
-              <div>
-                <p class="kicker">LIVE DATA</p>
-                <h2 id="dataTitle">本局状态</h2>
-              </div>
-            </div>
-            <span class="live-tag"><i aria-hidden="true"></i>TRACE</span>
-          </header>
-
-          <div class="state-hero">
-            <div class="state-node">
-              <span class="state-node-label">当前节点</span>
-              <strong id="currentNodeValue">—</strong>
-              <span class="state-phase" id="phaseValue">等待开始</span>
-            </div>
-            <div class="score-pills" aria-label="当前节点评分">
-              <span>g<b id="gValue">0</b></span>
-              <span>h<b id="hValue">0</b></span>
-              <span>f<b id="fValue">0</b></span>
-            </div>
-          </div>
-
-          <div class="stat-grid">
-            <div class="stat-tile">
-              <span>开放集</span>
-              <strong id="openValue">0</strong>
-            </div>
-            <div class="stat-tile">
-              <span>已扩展</span>
-              <strong id="exploredValue">0</strong>
-            </div>
-            <div class="stat-tile">
-              <span>路径步数</span>
-              <strong id="stepsValue">0</strong>
-            </div>
-            <div class="stat-tile">
-              <span>事件进度</span>
-              <strong id="eventValue">0/0</strong>
-            </div>
-            <div class="stat-tile stat-tile--algo">
-              <span>算法计算</span>
-              <strong id="algoMsValue">0.00</strong><em>ms</em>
-            </div>
-            <div class="stat-tile stat-tile--anim">
-              <span>动画耗时</span>
-              <strong id="timerValue">0.00</strong><em>s</em>
-            </div>
-          </div>
-
-          <div class="data-foot">
-            <span>算法 / 启发函数</span>
-            <code>A* · Manhattan</code>
-          </div>
-          <p class="data-note">算法 ms 来自引擎 metrics.computeMs；动画秒数为播放累计，两者分开计时。</p>
-        </section>
-
-        <section class="card predict-card" aria-labelledby="predictTitle">
-          <header class="panel-head">
-            <div class="section-title">
-              <span class="section-index" aria-hidden="true">03</span>
-              <div>
-                <p class="kicker">PREDICT</p>
-                <h2 id="predictTitle">先预测，再验证</h2>
-              </div>
-            </div>
-          </header>
-
-          <label class="predict-label" for="predictionInput">预测路径步数</label>
-          <div class="predict-field">
-            <input
-              id="predictionInput"
-              class="predict-input"
-              type="number"
-              min="-1"
-              step="1"
-              inputmode="numeric"
-              placeholder="例如 13"
-              aria-describedby="predictHint"
-            />
-            <span class="predict-unit">步</span>
-          </div>
-          <p class="predict-hint" id="predictHint">无路可走时填 -1；留空则不记录本次预测。</p>
-
-          <div class="predict-result" id="predictionResult" hidden>
-            <span id="predictionResultText">—</span>
-            <strong class="prediction-verdict is-neutral" id="predictionVerdict">—</strong>
-          </div>
-          <p class="predict-stats" id="predictionStats">历史预测正确率 —</p>
-        </section>
-
-        <section class="card control-card" aria-labelledby="controlTitle">
-          <header class="panel-head">
-            <div class="section-title">
-              <span class="section-index" aria-hidden="true">04</span>
-              <div>
-                <p class="kicker">PLAY</p>
-                <h2 id="controlTitle">绘制与出发</h2>
-              </div>
-            </div>
-          </header>
-
+        <div class="control-toolbar" role="group" aria-labelledby="controlTitle">
+          <span class="sr-only" id="controlTitle">绘制与出发</span>
           <div class="tool-group" role="group" aria-label="地图编辑工具">
             <button class="tool-btn is-active" type="button" data-tool="wall" aria-pressed="true" title="切换墙壁工具（快捷键 1）">
               <span class="tool-icon" aria-hidden="true">
@@ -337,10 +259,6 @@
             </button>
           </div>
 
-          <p class="shortcut-note">
-            快捷键 <kbd>1</kbd>–<kbd>4</kbd> 工具 · <kbd>R</kbd> 随机 · <kbd>C</kbd> 清空 · <kbd>Space</kbd> 播放 · <kbd>←</kbd><kbd>→</kbd> 单步
-          </p>
-
           <button class="source-btn" id="openDocsBtn" type="button" aria-haspopup="dialog">
             <span class="source-btn-icon" aria-hidden="true">
               <svg viewBox="0 0 20 20" fill="none">
@@ -355,15 +273,357 @@
               <path d="M4.5 10h11M11 5.5l4.5 4.5-4.5 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
           </button>
+        </div>
+
+        <footer class="board-footer">
+          <p class="tool-hint" id="boardHelp">
+            <span class="hint-dot" aria-hidden="true"></span>
+            <span id="hintText">按住左键拖拽绘制墙壁，右键可快速擦除。</span>
+          </p>
+          <div class="legend-panel">
+            <div class="view-switch" role="group" aria-label="探索视图模式">
+              <button class="view-btn is-active" id="semanticViewBtn" type="button" data-view="semantic" aria-pressed="true">语义视图</button>
+              <button class="view-btn" id="rainbowViewBtn" type="button" data-view="rainbow" aria-pressed="false">彩虹探索</button>
+            </div>
+            <div class="legend" id="semanticLegend" aria-label="语义视图图例">
+              <span><i class="swatch swatch--closed"></i>已扩展</span>
+              <span><i class="swatch swatch--open"></i>开放集</span>
+              <span><i class="swatch swatch--current"></i>当前节点</span>
+              <span><i class="swatch swatch--path"></i>路径</span>
+              <span><i class="swatch swatch--start"></i>起点</span>
+              <span><i class="swatch swatch--end"></i>终点</span>
+              <span><i class="swatch swatch--wall"></i>墙壁</span>
+              <span class="legend-f-note"><i aria-hidden="true">f</i>格内角标 = 开放集 f</span>
+            </div>
+            <div class="legend" id="rainbowLegend" aria-label="彩虹探索图例" hidden>
+              <span><i class="swatch swatch--start"></i>起点</span>
+              <span><i class="swatch swatch--end"></i>终点</span>
+              <span><i class="swatch swatch--wall"></i>墙壁</span>
+              <span class="legend-gradient" title="紫色最早探索，粉色最晚探索">探索顺序<em>早</em><i></i><em>晚</em></span>
+              <span><i class="swatch swatch--path"></i>最短路径</span>
+            </div>
+          </div>
+        </footer>
+      </section>
+
+      <aside class="sidebar rail-sidebar">
+        <section class="card rail-card" aria-label="状态与对比">
+          <div class="rail-tabs" role="tablist" aria-label="右侧栏切换">
+            <button class="rail-tab is-active" id="railStatusTab" type="button" role="tab" aria-selected="true" aria-controls="railStatusPanel" data-rail="status">
+              <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path d="M4 15.5V11M10 15.5V7M16 15.5V4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+              </svg>
+              <span>状态</span>
+            </button>
+            <button class="rail-tab" id="railCompareTab" type="button" role="tab" aria-selected="false" aria-controls="railComparePanel" data-rail="compare" tabindex="-1">
+              <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path d="M4 16V9M10 16V4M16 16v-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                <path d="M2.8 16h14.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.5" />
+              </svg>
+              <span>对比</span>
+            </button>
+          </div>
+
+          <div class="rail-panel" id="railStatusPanel" role="tabpanel" aria-labelledby="railStatusTab" data-panel="status">
+            <div class="rail-panel-head">
+              <div class="rail-title">
+                <p class="kicker">LIVE DATA</p>
+                <h2 id="dataTitle">本局状态</h2>
+              </div>
+              <span class="live-tag"><i aria-hidden="true"></i>TRACE</span>
+            </div>
+
+          <div class="state-hero">
+            <div class="state-node">
+              <span class="state-node-label">当前节点</span>
+              <strong id="currentNodeValue">—</strong>
+              <span class="state-phase" id="phaseValue">等待开始</span>
+            </div>
+            <div class="score-pills" aria-label="当前节点评分">
+              <span>g<b id="gValue">0</b></span>
+              <span>h<b id="hValue">0</b></span>
+              <span>f<b id="fValue">0</b></span>
+            </div>
+          </div>
+
+          <div class="stat-grid">
+            <div class="stat-tile">
+              <span>开放集</span>
+              <strong id="openValue">0</strong>
+            </div>
+            <div class="stat-tile">
+              <span>已扩展</span>
+              <strong id="exploredValue">0</strong>
+            </div>
+            <div class="stat-tile">
+              <span>路径步数</span>
+              <strong id="stepsValue">0</strong>
+            </div>
+            <div class="stat-tile">
+              <span>事件进度</span>
+              <strong id="eventValue">0/0</strong>
+            </div>
+            <div class="stat-tile stat-tile--algo">
+              <span>算法计算</span>
+              <strong id="algoMsValue">0.00</strong><em>ms</em>
+            </div>
+            <div class="stat-tile stat-tile--anim">
+              <span>动画耗时</span>
+              <strong id="timerValue">0.00</strong><em>s</em>
+            </div>
+          </div>
+
+          <div class="data-foot">
+            <span id="dataFootLabel">算法 / 距离估计</span>
+            <code>A* · Manhattan</code>
+          </div>
+            <p class="data-note">算法 ms 来自引擎 metrics.computeMs；动画秒数为播放累计，两者分开计时。</p>
+
+            <section class="nav-style" aria-labelledby="navStyleTitle">
+              <div class="nav-style-head">
+                <div class="rail-title">
+                  <p class="kicker">NAV STYLE</p>
+                  <h2 id="navStyleTitle">导航风格</h2>
+                </div>
+                <span class="nav-style-badge" id="navStyleBadge">标准</span>
+              </div>
+              <p class="nav-style-copy">先选一种走法，再看 A* 和 Dijkstra 差多少。点「为什么？」用 3 步看懂 g/h/f。</p>
+              <div class="nav-style-options" role="group" aria-label="选择导航风格">
+                <button class="nav-style-btn" type="button" data-weight="0" aria-pressed="false">
+                  <span class="nav-style-label">稳妥</span>
+                  <span class="nav-style-sub">多探索 · 保证最短</span>
+                </button>
+                <button class="nav-style-btn is-active" type="button" data-weight="1" aria-pressed="true">
+                  <span class="nav-style-label">标准</span>
+                  <span class="nav-style-sub">平衡方向与速度</span>
+                </button>
+                <button class="nav-style-btn" type="button" data-weight="2" aria-pressed="false">
+                  <span class="nav-style-label">激进</span>
+                  <span class="nav-style-sub">更大胆 · 可能更快</span>
+                </button>
+              </div>
+              <div class="nav-style-tools">
+                <button class="nav-style-tool" id="whyBtn" type="button" aria-haspopup="dialog" aria-controls="whyModal" aria-expanded="false">
+                  <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                    <circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.6" />
+                    <path d="M8.1 7.7c.2-1 1-1.7 2-1.7 1.2 0 2.1.8 2.1 1.9 0 1.6-1.9 1.7-2.2 3.1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                    <circle cx="10" cy="13.8" r=".9" fill="currentColor" />
+                  </svg>
+                  <span class="nav-style-tool-copy">
+                    <strong>为什么？</strong>
+                    <small id="whyBtnHint">3 步 + 小测</small>
+                  </span>
+                </button>
+                <button class="nav-style-tool nav-style-tool--trap" id="trapMapBtn" type="button">
+                  <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                    <path d="M3.4 14.8c2.2-4.8 3.9-6.8 6-6.8 2.4 0 2.5 5 5.1 5 1 0 1.9-.6 2.7-1.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                    <circle cx="3.4" cy="14.8" r="1.7" fill="currentColor" />
+                    <circle cx="17.2" cy="11.2" r="1.7" stroke="currentColor" stroke-width="1.4" />
+                  </svg>
+                  <span class="nav-style-tool-copy">
+                    <strong>绕路陷阱</strong>
+                    <small>看看激进怎么绕远</small>
+                  </span>
+                </button>
+              </div>
+              <p class="nav-style-result" id="navStyleResult" role="status" hidden></p>
+              <div class="nav-style-divergence" id="navStyleDivergence" hidden></div>
+              <p class="nav-style-note" id="navStyleNote" hidden></p>
+              <div class="nav-style-trap" id="trapMapPanel" hidden>
+                <p id="trapMapText"></p>
+                <button class="trap-restore" id="trapRestoreBtn" type="button">回到原地图</button>
+              </div>
+              <p class="nav-style-tech" id="navStyleTech" hidden></p>
+            </section>
+
+            <section class="predict-embed" aria-labelledby="predictTitle">
+              <div class="predict-embed-head">
+                <div class="rail-title">
+                  <p class="kicker">PREDICT</p>
+                  <h2 id="predictTitle">先预测，再验证</h2>
+                </div>
+              </div>
+
+          <label class="predict-label" for="predictionInput">预测路径步数</label>
+          <div class="predict-field">
+            <input
+              id="predictionInput"
+              class="predict-input"
+              type="number"
+              min="-1"
+              step="1"
+              inputmode="numeric"
+              placeholder="例如 13"
+              aria-describedby="predictHint"
+            />
+            <span class="predict-unit">步</span>
+          </div>
+          <p class="predict-hint" id="predictHint">无路可走时填 -1；留空则不记录本次预测。</p>
+
+          <div class="predict-result" id="predictionResult" hidden>
+            <span id="predictionResultText">—</span>
+            <strong class="prediction-verdict is-neutral" id="predictionVerdict">—</strong>
+          </div>
+          <p class="predict-stats" id="predictionStats">历史预测正确率 —</p>
+            </section>
+          </div>
+
+          <div class="rail-panel" id="railComparePanel" role="tabpanel" aria-labelledby="railCompareTab" data-panel="compare" hidden>
+            <div class="rail-panel-head">
+              <div class="rail-title">
+                <p class="kicker">COMPARE</p>
+                <h2 id="compareTitle">三算法对比</h2>
+              </div>
+              <span class="live-tag"><i aria-hidden="true"></i>METRICS</span>
+            </div>
+
+          <p class="compare-copy">同一张地图、同一对起终点：A* 带曼哈顿距离估计，BFS 逐层扩散，Dijkstra 按代价出队。</p>
+
+          <button class="compare-btn" id="compareBtn" type="button">
+            <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <path d="M4 16V9M10 16V4M16 16v-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+              <path d="M2.8 16h14.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.5" />
+            </svg>
+            对比 A* / BFS / Dijkstra
+          </button>
+
+          <p class="compare-status" id="compareStatus" role="status">尚未运行对比；点击按钮分析当前地图。</p>
+
+          <div class="compare-table-wrap" id="compareTableWrap" hidden>
+            <table class="compare-table">
+              <caption class="sr-only">A*、BFS 与 Dijkstra 在当前地图上的扩展节点、路径步数与计算耗时</caption>
+              <thead>
+                <tr>
+                  <th scope="col">算法</th>
+                  <th scope="col">扩展节点</th>
+                  <th scope="col">路径步数</th>
+                  <th scope="col">计算 ms</th>
+                </tr>
+              </thead>
+              <tbody id="compareBody"></tbody>
+            </table>
+          </div>
+            <p class="compare-note">扩展节点越少，搜索越集中；耗时是单次运行的参考值。</p>
+          </div>
         </section>
       </aside>
     </div>
 
     <footer class="page-footer">
       <span>A* Pathfinding × HTML Canvas</span>
-      <span>默认语义视图 · 按事件单步验证开放集与已扩展节点</span>
+      <span>快捷键 1–4 工具 · R 随机 · C 清空 · Space 播放 · ← → 单步</span>
     </footer>
   </main>
+
+  <div class="level-drawer-backdrop" id="levelDetailBackdrop" hidden></div>
+  <aside class="level-drawer" id="levelDetailDrawer" role="dialog" aria-modal="true" aria-labelledby="levelDrawerTitle" hidden>
+    <header class="level-drawer-head">
+      <div>
+        <p class="kicker">TASK DETAILS</p>
+        <h2 id="levelDrawerTitle">任务详情</h2>
+      </div>
+      <button class="drawer-close" id="levelDetailClose" type="button" aria-label="关闭任务详情">
+        <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M5 5l10 10M15 5 5 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+        </svg>
+      </button>
+    </header>
+    <p class="drawer-copy">答对当前关卡的小测，本关就会标记为「已掌握」。进度保存在本机浏览器。</p>
+    <div class="level-checks">
+      <span class="level-check" id="levelQuizPill" data-state="idle">小测待完成</span>
+    </div>
+    <p class="level-feedback" id="levelFeedback" data-state="idle" role="status">选择关卡并载入地图；答对小测即可掌握本关。</p>
+    <div class="quiz-block">
+      <p class="quiz-kicker">QUICK CHECK · 小测</p>
+      <p class="quiz-question" id="quizQuestion"></p>
+      <div class="quiz-options" id="quizOptions" role="radiogroup" aria-label="关卡小测选项"></div>
+      <button class="quiz-submit" id="quizSubmitBtn" type="button">提交答案</button>
+      <p class="quiz-feedback" id="quizFeedback" role="status" hidden></p>
+    </div>
+    <p class="drawer-foot">快捷键 Esc 可关闭；当前关卡目标在顶部任务条常驻显示。</p>
+  </aside>
+
+  <div class="why-backdrop" id="whyBackdrop" hidden></div>
+  <aside class="why-modal" id="whyModal" role="dialog" aria-modal="true" aria-labelledby="whyTitle" hidden>
+    <header class="why-head">
+      <div>
+        <p class="kicker">WHY IT WORKS</p>
+        <h2 id="whyTitle">A* 为什么这样走？</h2>
+      </div>
+      <button class="drawer-close" id="whyClose" type="button" aria-label="关闭为什么教程">
+        <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M5 5l10 10M15 5 5 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+        </svg>
+      </button>
+    </header>
+
+    <ol class="why-progress" aria-label="教程进度">
+      <li data-why-dot="0"><span>1</span>认识 g / h / f</li>
+      <li data-why-dot="1"><span>2</span>比 f 选谁</li>
+      <li data-why-dot="2"><span>3</span>放大 h</li>
+      <li data-why-dot="3"><span>4</span>机制小测</li>
+    </ol>
+
+    <div class="why-body">
+      <section class="why-step" data-why-step="0">
+        <p class="why-eyebrow">STEP 1 · 三个数字</p>
+        <h3>一个格子值不值得先去？</h3>
+        <div class="why-demo">
+          <div class="why-demo-cell" aria-hidden="true">
+            <span class="why-demo-g">g=4</span>
+            <strong class="why-demo-f">f=10</strong>
+            <span class="why-demo-h">h=6</span>
+          </div>
+          <dl class="why-demo-list">
+            <div><dt>g = 4</dt><dd>从起点已经走了几步（实际代价）。</dd></div>
+            <div><dt>h = 6</dt><dd>估计离终点还有几步，它只是估计。</dd></div>
+            <div><dt>f = 10</dt><dd>综合评分：g + h = 4 + 6 = 10。</dd></div>
+          </dl>
+        </div>
+        <p class="why-copy">每次从开放集里挑 <b>f 最小</b> 的格子来扩展。先看下面三个候选。</p>
+      </section>
+
+      <section class="why-step" data-why-step="1" hidden>
+        <p class="why-eyebrow">STEP 2 · 比 f 选谁</p>
+        <h3>三个候选，下一个扩展谁？</h3>
+        <p class="why-copy">只看 f 最小的那个。点一个候选，答案会立刻揭晓。</p>
+        <div class="why-options" id="whyOptionsPredict1"></div>
+        <p class="why-feedback" id="whyFeedbackPredict1" role="status" hidden></p>
+      </section>
+
+      <section class="why-step" data-why-step="2" hidden>
+        <p class="why-eyebrow">STEP 3 · 放大 h</p>
+        <h3>如果更相信“离终点的估计”，把 h 乘以 2 再选</h3>
+        <p class="why-copy">同一组候选，g 不变，h 的估计放大 2 倍：f = g + 2×h。再点一次。</p>
+        <div class="why-options" id="whyOptionsPredict2"></div>
+        <p class="why-feedback" id="whyFeedbackPredict2" role="status" hidden></p>
+      </section>
+
+      <section class="why-step" data-why-step="3" hidden>
+        <p class="why-eyebrow">QUICK CHECK · 机制小测</p>
+        <h3>把 h 放大，最可能发生什么？</h3>
+        <p class="why-copy">不是问名字，而是问机制：搜索量和路径长度会怎样变化？</p>
+        <div class="why-options why-options--quiz" id="whyOptionsQuiz"></div>
+        <p class="why-feedback" id="whyFeedbackQuiz" role="status" hidden></p>
+
+        <div class="why-terms" id="whyTerms" hidden>
+          <p class="why-terms-kicker">现在可以给它们正式的名字</p>
+          <dl>
+            <div><dt>启发函数 h</dt><dd>对“离终点还剩多远”的估计；本页用曼哈顿距离。</dd></div>
+            <div><dt>启发权重 w</dt><dd>把 h 放大 w 倍参与排序；本页取 0 / 1 / 2。</dd></div>
+            <div><dt>加权 A*</dt><dd>f = g + w·h；w 大于 1 时搜索可能更少，但不再保证最短。</dd></div>
+          </dl>
+        </div>
+      </section>
+    </div>
+
+    <footer class="why-foot">
+      <button class="why-back" id="whyBack" type="button">上一步</button>
+      <span class="why-count" id="whyStepCount">1 / 4</span>
+      <button class="why-next" id="whyNext" type="button">下一步</button>
+      <button class="why-next" id="whyDone" type="button" hidden>完成教程</button>
+    </footer>
+  </aside>
 
   <template id="astarDocsAnalysis">
     <div class="formula-card">

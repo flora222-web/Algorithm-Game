@@ -2,7 +2,7 @@
 
 /**
  * Tiny localStorage-backed progress store.
- * Only prediction accuracy is needed for P0, but the shape can grow.
+ * P1 adds per-level mastery on top of prediction accuracy.
  */
 (() => {
   const STORAGE_KEY = 'algorithm-playground.progress.v1';
@@ -41,6 +41,24 @@
     }
   }
 
+  function normalizeLevels(levels) {
+    const result = {};
+    if (!levels || typeof levels !== 'object') return result;
+
+    Object.keys(levels).forEach((levelId) => {
+      const level = levels[levelId] || {};
+      result[levelId] = {
+        attempts: Math.max(0, Number(level.attempts) || 0),
+        passed: Boolean(level.passed),
+        quizCorrect: Boolean(level.quizCorrect),
+        lastResult: typeof level.lastResult === 'string' ? level.lastResult : 'none',
+        updatedAt: Number(level.updatedAt) || 0
+      };
+    });
+
+    return result;
+  }
+
   function normalize(record) {
     const predictions = record && record.predictions ? record.predictions : {};
     const attempts = Math.max(0, Number(predictions.attempts) || 0);
@@ -52,6 +70,7 @@
         correct,
         accuracy: attempts > 0 ? Number((correct / attempts).toFixed(3)) : 0
       },
+      levels: normalizeLevels(record && record.levels),
       updatedAt: Number(record && record.updatedAt) || 0
     };
   }
@@ -67,6 +86,7 @@
     const data = readAll();
     const current = normalize(data[module]);
     const next = {
+      ...current,
       predictions: {
         attempts: current.predictions.attempts + 1,
         correct: current.predictions.correct + (ok ? 1 : 0),
@@ -84,6 +104,55 @@
     return next;
   }
 
+  function recordLevel(module, levelId, result = {}) {
+    if (!module || !levelId) return get(module);
+
+    const data = readAll();
+    const current = normalize(data[module]);
+    const previous = current.levels[levelId] || {
+      attempts: 0,
+      passed: false,
+      quizCorrect: false,
+      lastResult: 'none',
+      updatedAt: 0
+    };
+
+    const passed = Boolean(result.passed);
+    const quizCorrect = Boolean(result.quizCorrect);
+    const lastResult = passed && quizCorrect
+      ? 'pass'
+      : passed
+        ? 'partial'
+        : 'fail';
+
+    data[module] = {
+      ...current,
+      levels: {
+        ...current.levels,
+        [levelId]: {
+          attempts: previous.attempts + 1,
+          passed: previous.passed || passed,
+          quizCorrect: previous.quizCorrect || quizCorrect,
+          lastResult,
+          updatedAt: Date.now()
+        }
+      },
+      updatedAt: Date.now()
+    };
+
+    writeAll(data);
+    return get(module);
+  }
+
+  function getLevels(module) {
+    return get(module).levels;
+  }
+
+  function hasLevel(module, levelId) {
+    const level = getLevels(module)[levelId];
+    return Boolean(level && level.passed && level.quizCorrect);
+  }
+
   function reset() {
     memory = {};
     if (!storageAvailable) return;
@@ -98,6 +167,9 @@
   window.ProgressStore = {
     get,
     recordPrediction,
+    recordLevel,
+    getLevels,
+    hasLevel,
     reset
   };
 })();

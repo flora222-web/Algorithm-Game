@@ -4,7 +4,7 @@
  * 寻路实验室 · A* UI 层
  * ------------------------------------------------------------
  * 纯算法、事件流和随机地图都由 window.AStarEngine 提供；
- * 本文件只负责地图编辑、事件级回放、语义/彩虹绘制、预测与结果展示。
+ * 本文件只负责地图编辑、事件级回放、语义/彩虹绘制、预测、算法对比与关卡展示。
  */
 (() => {
   // =========================================================
@@ -53,6 +53,110 @@
     maxStepMs: 140
   };
 
+  // ---------- P1：算法对比与关卡 ----------
+
+  const COMPARE_ROWS = [
+    { key: 'astar', label: 'A*' },
+    { key: 'bfs', label: 'BFS' },
+    { key: 'dijkstra', label: 'Dijkstra' }
+  ];
+
+  // 概念先导：先用“稳妥 / 标准 / 激进”讲走法，技术名与 w 只在二级说明出现
+  const NAV_STYLES = [
+    { weight: 0, label: '稳妥', summary: '更接近 Dijkstra：多探索一些，最短路径有保证。' },
+    { weight: 1, label: '标准', summary: '标准 A*：在方向感和搜索量之间取平衡。' },
+    { weight: 2, label: '激进', summary: '更相信终点方向的估计：可能更快，但不保证最短。' }
+  ];
+
+  const WHY_STORAGE_KEY = 'astar.whyTutorialDone.v1';
+  const CANVAS_MONO = '"SFMono-Regular", "Cascadia Code", "Roboto Mono", Consolas, monospace';
+
+  // 固定陷阱图：两处缺口；激进会先钻近处缺口，再绕上廊，最终多走 4 步。
+  const TRAP_MAP = {
+    start: { x: 1, y: 10 },
+    end: { x: 18, y: 10 },
+    walls: [[7, 9], [8, 9], [3, 10], [9, 10], [15, 10], [9, 11]]
+  };
+
+  const WHY_CANDIDATES = {
+    plain: [
+      { key: 'A', g: 3, h: 6, f: 9, correct: true },
+      { key: 'B', g: 7, h: 3, f: 10, correct: false },
+      { key: 'C', g: 5, h: 7, f: 12, correct: false }
+    ],
+    weighted: [
+      { key: 'A', g: 3, h: 6, f: 15, correct: false },
+      { key: 'B', g: 7, h: 3, f: 13, correct: true },
+      { key: 'C', g: 5, h: 7, f: 19, correct: false }
+    ]
+  };
+
+  const WHY_QUIZ_OPTIONS = [
+    { key: 'A', text: 'h 会变成真实距离，f 更准确', correct: false },
+    { key: 'B', text: '不管怎么加权，路径一定仍然最短', correct: false },
+    { key: 'C', text: '扩展可能更少，但路径可能变长（不再保证最短）', correct: true }
+  ];
+
+  const LEVELS = {
+    heuristic: {
+      id: 'heuristic',
+      order: 1,
+      kicker: 'LEVEL 1 · HEURISTIC',
+      name: '启发对比',
+      goal: '清空地图，起点 (3, 10)、终点 (16, 10)。用三种算法跑同一张空地图，检查 A* 是否比 BFS 扩展得更少。',
+      meta: '起点 (3,10) → 终点 (16,10) · 空地图',
+      quiz: {
+        question: '同样一张空地图，为什么 A* 通常比 BFS 扩展更少节点？',
+        hint: 'A* 的 f = g + h，曼哈顿启发会优先考虑离终点更近的节点。',
+        options: [
+          { text: '曼哈顿启发让 A* 优先朝终点方向扩展', correct: true },
+          { text: 'BFS 会重复扩展同一个节点，所以更慢', correct: false },
+          { text: 'A* 完全不需要检查邻居，因此扩展更少', correct: false }
+        ]
+      }
+    },
+    tiebreak: {
+      id: 'tiebreak',
+      order: 2,
+      kicker: 'LEVEL 2 · TIE-BREAK',
+      name: '平局打破',
+      goal: '载入固定墙体地图，分别用 tieBreak:"h" 与 "key" 运行 A*。检查路径步数相同，但 visited 访问顺序不同。',
+      meta: '起点 (3,3) → 终点 (16,16) · 固定墙体地图',
+      start: { x: 3, y: 3 },
+      end: { x: 16, y: 16 },
+      walls: [
+        [8, 7], [8, 8], [8, 9], [9, 9],
+        [12, 12], [12, 13], [13, 13]
+      ],
+      quiz: {
+        question: '改变平局时的出堆顺序（tieBreak）通常会带来什么影响？',
+        hint: '平局只决定同样 f 值的节点谁先扩展；距离估计不高估时，最短路径长度不变。',
+        options: [
+          { text: '路径长度与访问顺序都会变长', correct: false },
+          { text: '访问顺序可能不同，但最短路径长度不变', correct: true },
+          { text: '只有 tieBreak:"h" 才能找到最短路径', correct: false }
+        ]
+      }
+    },
+    unreachable: {
+      id: 'unreachable',
+      order: 3,
+      kicker: 'LEVEL 3 · UNREACHABLE',
+      name: '无路可达',
+      goal: '封死终点的上下左右四个邻居，同时保持起点区域可达。验证 A* 返回无路，并且 expanded 大于 0。',
+      meta: '起点 (3,10) → 终点 (16,10) · 终点四邻封死',
+      quiz: {
+        question: '当终点四邻被封死时，A* 的正确行为是？',
+        hint: '堆被清空之前，算法必须确认所有可达节点都扩展完了，才能断言无路。',
+        options: [
+          { text: '立刻返回无路，扩展节点数为 0', correct: false },
+          { text: '扩展完可达区域后返回无路，扩展数大于 0', correct: true },
+          { text: '穿过墙壁强行连到终点', correct: false }
+        ]
+      }
+    }
+  };
+
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const traceUtils = window.TraceUtils || {};
   const formatMs = typeof traceUtils.formatMs === 'function'
@@ -71,6 +175,7 @@
   const canvasWrap = document.getElementById('canvasWrap');
 
   const dom = {
+    appShell: document.querySelector('main.app'),
     statusPill: document.getElementById('statusPill'),
     statusText: document.getElementById('statusText'),
     hintText: document.getElementById('hintText'),
@@ -125,6 +230,7 @@
     resultSteps: document.getElementById('resultSteps'),
     resultExplored: document.getElementById('resultExplored'),
     resultTime: document.getElementById('resultTime'),
+    resultStyle: document.getElementById('resultStyle'),
     resultPrediction: document.getElementById('resultPrediction'),
     resultTimers: document.getElementById('resultTimers'),
     resultClose: document.getElementById('resultClose'),
@@ -132,7 +238,67 @@
 
     toast: document.getElementById('toast'),
     liveRegion: document.getElementById('liveRegion'),
-    openDocsBtn: document.getElementById('openDocsBtn')
+    openDocsBtn: document.getElementById('openDocsBtn'),
+
+    compareBtn: document.getElementById('compareBtn'),
+    compareStatus: document.getElementById('compareStatus'),
+    compareTableWrap: document.getElementById('compareTableWrap'),
+    compareBody: document.getElementById('compareBody'),
+
+    navStyleButtons: Array.from(document.querySelectorAll('.nav-style-btn')),
+    navStyleBadge: document.getElementById('navStyleBadge'),
+    navStyleResult: document.getElementById('navStyleResult'),
+    navStyleNote: document.getElementById('navStyleNote'),
+    navStyleTech: document.getElementById('navStyleTech'),
+    navStyleDivergence: document.getElementById('navStyleDivergence'),
+    dataFootLabel: document.getElementById('dataFootLabel'),
+
+    whyBtn: document.getElementById('whyBtn'),
+    whyBtnHint: document.getElementById('whyBtnHint'),
+    whyBackdrop: document.getElementById('whyBackdrop'),
+    whyModal: document.getElementById('whyModal'),
+    whyClose: document.getElementById('whyClose'),
+    whyBack: document.getElementById('whyBack'),
+    whyNext: document.getElementById('whyNext'),
+    whyDone: document.getElementById('whyDone'),
+    whyStepCount: document.getElementById('whyStepCount'),
+    whySteps: Array.from(document.querySelectorAll('[data-why-step]')),
+    whyDots: Array.from(document.querySelectorAll('[data-why-dot]')),
+    whyOptionsPredict1: document.getElementById('whyOptionsPredict1'),
+    whyOptionsPredict2: document.getElementById('whyOptionsPredict2'),
+    whyOptionsQuiz: document.getElementById('whyOptionsQuiz'),
+    whyFeedbackPredict1: document.getElementById('whyFeedbackPredict1'),
+    whyFeedbackPredict2: document.getElementById('whyFeedbackPredict2'),
+    whyFeedbackQuiz: document.getElementById('whyFeedbackQuiz'),
+    whyTerms: document.getElementById('whyTerms'),
+
+    trapMapBtn: document.getElementById('trapMapBtn'),
+    trapMapPanel: document.getElementById('trapMapPanel'),
+    trapMapText: document.getElementById('trapMapText'),
+    trapRestoreBtn: document.getElementById('trapRestoreBtn'),
+
+    decisionHint: document.getElementById('decisionHint'),
+    decisionHintText: document.getElementById('decisionHintText'),
+
+    railTabs: Array.from(document.querySelectorAll('.rail-tab')),
+    railPanels: Array.from(document.querySelectorAll('.rail-panel')),
+    levelDetailBtn: document.getElementById('levelDetailBtn'),
+    levelDetailDrawer: document.getElementById('levelDetailDrawer'),
+    levelDetailBackdrop: document.getElementById('levelDetailBackdrop'),
+    levelDetailClose: document.getElementById('levelDetailClose'),
+
+    levelTabs: Array.from(document.querySelectorAll('.level-tab')),
+    levelKicker: document.getElementById('levelKicker'),
+    levelGoal: document.getElementById('levelGoal'),
+    levelMeta: document.getElementById('levelMeta'),
+    loadLevelBtn: document.getElementById('loadLevelBtn'),
+    levelQuizPill: document.getElementById('levelQuizPill'),
+    levelFeedback: document.getElementById('levelFeedback'),
+    levelMasteryText: document.getElementById('levelMasteryText'),
+    quizQuestion: document.getElementById('quizQuestion'),
+    quizOptions: document.getElementById('quizOptions'),
+    quizSubmitBtn: document.getElementById('quizSubmitBtn'),
+    quizFeedback: document.getElementById('quizFeedback')
   };
 
   // =========================================================
@@ -145,6 +311,19 @@
     end: { x: 16, y: 10 },
     tool: 'wall',
     viewMode: 'semantic',
+    heuristicWeight: 1,
+    navStyleSelected: false,
+
+    tutorialOpen: false,
+    tutorialDone: false,
+    tutorialStep: 0,
+    tutorialAnswers: {
+      predict1: { picked: null, solved: false },
+      predict2: { picked: null, solved: false },
+      quiz: { picked: null, solved: false }
+    },
+    trapSnapshot: null,
+    trapActive: false,
 
     trace: null,
     eventIndex: 0,
@@ -166,13 +345,32 @@
     dragMode: null,
     lastEditedKey: -1,
     overlayOpen: false,
+    detailDrawerOpen: false,
 
     toastHideTimer: 0,
     toastRemoveTimer: 0,
     domCache: {
       timer: null
+    },
+
+    levelId: 'heuristic',
+    levelRuntime: {
+      heuristic: createLevelRuntime(),
+      tiebreak: createLevelRuntime(),
+      unreachable: createLevelRuntime()
     }
   };
+
+  function createLevelRuntime() {
+    return {
+      loaded: false,
+      checked: false,
+      passed: false,
+      quizCorrect: false,
+      quizIndex: null,
+      feedback: null
+    };
+  }
 
   // =========================================================
   // 初始化
@@ -184,9 +382,13 @@
   init();
 
   function init() {
+    state.tutorialDone = readWhyTutorialDone();
     bindEvents();
+    initWhyTutorial();
     initAlgorithmDocs();
     updatePredictionStats();
+    initLevels();
+    renderNavStyle();
     resetRunState({ silent: true });
     selectTool('wall', true);
     resizeCanvas();
@@ -255,6 +457,41 @@
       dom.predictionInput.classList.remove('is-invalid');
     });
 
+    dom.compareBtn.addEventListener('click', runComparison);
+
+    dom.navStyleButtons.forEach((button) => {
+      button.addEventListener('click', () => selectNavStyle(Number(button.dataset.weight)));
+    });
+
+    dom.whyBtn.addEventListener('click', openWhyTutorial);
+    dom.whyClose.addEventListener('click', () => closeWhyTutorial());
+    dom.whyBackdrop.addEventListener('click', () => closeWhyTutorial());
+    dom.whyBack.addEventListener('click', () => goToWhyStep(state.tutorialStep - 1));
+    dom.whyNext.addEventListener('click', () => goToWhyStep(state.tutorialStep + 1));
+    dom.whyDone.addEventListener('click', () => closeWhyTutorial({ completed: true }));
+    dom.whyOptionsPredict1.addEventListener('click', onWhyOptionClick);
+    dom.whyOptionsPredict2.addEventListener('click', onWhyOptionClick);
+    dom.whyOptionsQuiz.addEventListener('click', onWhyOptionClick);
+    dom.whyModal.addEventListener('keydown', onWhyModalKeyDown);
+
+    dom.trapMapBtn.addEventListener('click', loadTrapMap);
+    dom.trapRestoreBtn.addEventListener('click', restoreTrapMap);
+
+    dom.railTabs.forEach((tab) => {
+      tab.addEventListener('click', () => selectRailTab(tab.dataset.rail, true));
+      tab.addEventListener('keydown', onRailTabKeyDown);
+    });
+    dom.levelDetailBtn.addEventListener('click', openLevelDetails);
+    dom.levelDetailClose.addEventListener('click', () => closeLevelDetails());
+    dom.levelDetailBackdrop.addEventListener('click', () => closeLevelDetails());
+
+    dom.levelTabs.forEach((button) => {
+      button.addEventListener('click', () => selectLevel(button.dataset.level));
+    });
+    dom.loadLevelBtn.addEventListener('click', () => loadLevel(state.levelId));
+    dom.quizOptions.addEventListener('click', onQuizOptionClick);
+    dom.quizSubmitBtn.addEventListener('click', submitQuiz);
+
     // 鼠标操作后移除按钮焦点，保证直接按 Enter / Space 仍作用于页面。
     [
       ...dom.toolButtons,
@@ -266,7 +503,18 @@
       dom.stepNextBtn,
       dom.playPauseBtn,
       dom.semanticViewBtn,
-      dom.rainbowViewBtn
+      dom.rainbowViewBtn,
+      ...dom.railTabs,
+      ...dom.navStyleButtons,
+      dom.whyBtn,
+      dom.trapMapBtn,
+      dom.trapRestoreBtn,
+      dom.levelDetailBtn,
+      dom.levelDetailClose,
+      ...dom.levelTabs,
+      dom.compareBtn,
+      dom.loadLevelBtn,
+      dom.quizSubmitBtn
     ].forEach((button) => {
       button.addEventListener('pointerup', () => button.blur());
     });
@@ -291,6 +539,77 @@
     canvas.addEventListener('contextmenu', (event) => event.preventDefault());
 
     window.addEventListener('keydown', onKeyDown);
+  }
+
+  // =========================================================
+  // 驾驶舱：右侧标签与任务详情抽屉
+  // =========================================================
+
+  function selectRailTab(rail, focusTab = false) {
+    if (rail !== 'status' && rail !== 'compare') return;
+
+    dom.railTabs.forEach((tab) => {
+      const active = tab.dataset.rail === rail;
+      tab.classList.toggle('is-active', active);
+      tab.setAttribute('aria-selected', String(active));
+      tab.tabIndex = active ? 0 : -1;
+      if (active && focusTab) tab.focus({ preventScroll: true });
+    });
+
+    dom.railPanels.forEach((panel) => {
+      panel.hidden = panel.dataset.panel !== rail;
+    });
+  }
+
+  function onRailTabKeyDown(event) {
+    const tabs = dom.railTabs;
+    const index = tabs.indexOf(event.currentTarget);
+    if (index < 0) return;
+
+    let next = null;
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+      next = (index + tabs.length - 1) % tabs.length;
+    } else if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+      next = (index + 1) % tabs.length;
+    } else if (event.key === 'Home') {
+      next = 0;
+    } else if (event.key === 'End') {
+      next = tabs.length - 1;
+    }
+
+    if (next === null) return;
+    event.preventDefault();
+    selectRailTab(tabs[next].dataset.rail, true);
+  }
+
+  function openLevelDetails() {
+    if (!dom.levelDetailDrawer || !dom.levelDetailDrawer.hidden) return;
+
+    dom.levelDetailDrawer.hidden = false;
+    dom.levelDetailBackdrop.hidden = false;
+    dom.levelDetailBtn.setAttribute('aria-expanded', 'true');
+    state.detailDrawerOpen = true;
+    document.body.classList.add('astar-drawer-open');
+    if (dom.appShell) dom.appShell.inert = true;
+    renderLevelFeedback();
+    renderLevelProgress();
+
+    requestAnimationFrame(() => {
+      dom.levelDetailClose.focus({ preventScroll: true });
+    });
+  }
+
+  function closeLevelDetails({ moveFocus = true } = {}) {
+    if (!dom.levelDetailDrawer || dom.levelDetailDrawer.hidden) return;
+
+    dom.levelDetailDrawer.hidden = true;
+    dom.levelDetailBackdrop.hidden = true;
+    dom.levelDetailBtn.setAttribute('aria-expanded', 'false');
+    state.detailDrawerOpen = false;
+    document.body.classList.remove('astar-drawer-open');
+    if (dom.appShell) dom.appShell.inert = false;
+
+    if (moveFocus) dom.levelDetailBtn.focus({ preventScroll: true });
   }
 
   // =========================================================
@@ -329,7 +648,9 @@
 
     let trace;
     try {
-      trace = Engine.findPathTrace(state.walls, state.start, state.end);
+      trace = Engine.findPathTrace(state.walls, state.start, state.end, {
+        heuristicWeight: state.heuristicWeight
+      });
     } catch (error) {
       console.error('A* 引擎运行失败：', error);
       setStatus('failed', '引擎异常');
@@ -427,6 +748,7 @@
       dom.timelineSlider.value = sliderValue;
     }
 
+    updateDecisionHint(view);
     draw();
   }
 
@@ -745,6 +1067,82 @@
   }
 
   // =========================================================
+  // 决策提示：每一步解释“为什么选它”
+  // =========================================================
+
+  function fFormulaText(g, h, weight) {
+    const weightedH = weight * h;
+
+    if (state.tutorialDone) {
+      return `g=${g} + w×h = ${g} + ${weight}×${h} = ${g + weightedH}`;
+    }
+
+    return weight === 0
+      ? `g=${g} + 0×h = ${g}`
+      : `g=${g} + ${weight}×h=${h} = ${g + weightedH}`;
+  }
+
+  function updateDecisionHint(view = null) {
+    if (!dom.decisionHint || !dom.decisionHintText) return;
+
+    if (!state.trace) {
+      dom.decisionHint.dataset.state = 'idle';
+      dom.decisionHintText.textContent = '开始寻路后，这里会解释开放集里谁最该先走。';
+      return;
+    }
+
+    const eventView = view || buildEventView(state.eventIndex);
+    const event = eventView.event;
+    const weight = state.heuristicWeight;
+
+    if (!event) {
+      dom.decisionHint.dataset.state = 'idle';
+      dom.decisionHintText.textContent = '拖动滑块或单步，查看每一步为什么选它。';
+      return;
+    }
+
+    if (event.type === 'expand') {
+      const currentText = `(${event.x}, ${event.y})：${fFormulaText(event.g, event.h, weight)}`;
+
+      if (event.phase === 'goal') {
+        dom.decisionHint.dataset.state = 'goal';
+        dom.decisionHintText.textContent =
+          `刚扩展目标 ${currentText}；搜索结束，开始沿 parent 回溯路径。`;
+        return;
+      }
+
+      const next = eventView.openTop && eventView.openTop[0];
+
+      if (!next) {
+        dom.decisionHint.dataset.state = 'empty';
+        dom.decisionHintText.textContent =
+          `刚扩展 ${currentText}；开放集此刻为空，正在把可用邻居加入。`;
+        return;
+      }
+
+      dom.decisionHint.dataset.state = 'expand';
+      dom.decisionHintText.textContent =
+        `刚扩展 ${currentText}。开放集里 f 最小的是 (${next.x}, ${next.y})：${fFormulaText(next.g, next.h, weight)}；先扩展它。`;
+      return;
+    }
+
+    if (event.type === 'path') {
+      const point = fromKey(event.key);
+      dom.decisionHint.dataset.state = 'path';
+      dom.decisionHintText.textContent =
+        `回溯路径第 ${event.step} 步：(${point.x}, ${point.y})。f 最小的节点优先推进到目标，再沿 parent 连回起点。`;
+      return;
+    }
+
+    if (event.type === 'done') {
+      dom.decisionHint.dataset.state = event.found ? 'goal' : 'empty';
+      dom.decisionHintText.textContent = event.found
+        ? '搜索完成：每次都先扩展开放集里 f 最小的节点，直到目标被弹出。'
+        : '搜索完成：开放集已经为空，终点不可达。';
+    }
+  }
+
+  // =========================================================
   // 预测
   // =========================================================
 
@@ -919,6 +1317,7 @@
     setText(dom.algoMsValue, '0.00');
     setText(dom.timerValue, '0.00');
     state.domCache.timer = '0.00';
+    updateDecisionHint();
   }
 
   function setText(element, value) {
@@ -968,8 +1367,26 @@
 
     dom.resultKicker.textContent = success ? 'ROUTE FOUND' : 'NO ROUTE';
     dom.resultTitle.textContent = success ? '寻路成功！' : '这条路走不通';
+
+    const style = navStyleFor(state.heuristicWeight);
+    const aggressive = state.heuristicWeight > 1;
+    const weightLabel = state.tutorialDone
+      ? `启发权重 w = ${state.heuristicWeight}`
+      : state.heuristicWeight === 0
+        ? 'h 不参与排序'
+        : state.heuristicWeight === 1
+          ? '标准估计'
+          : `h 放大 ${state.heuristicWeight} 倍`;
+    dom.resultStyle.hidden = false;
+    dom.resultStyle.dataset.state = aggressive ? 'warn' : 'info';
+    dom.resultStyle.textContent =
+      `导航风格：${style.label} · ${weightLabel}`
+      + (aggressive ? ' · 不保证最短路径' : '');
+
     dom.resultMessage.textContent = success
-      ? 'A* 已经找到通往终点的最短路径。拖动事件滑块，可以回看每一次开放集变化。'
+      ? aggressive
+        ? 'A* 已经找到一条可行路径；激进模式不保证最短，拖动滑块看看它的取舍。'
+        : 'A* 已经找到通往终点的最短路径。拖动事件滑块，可以回看每一次开放集变化。'
       : '起点和终点之间暂时没有连通路线，调整一下障碍物再试一次吧。';
 
     dom.resultSteps.textContent = String(pathMoves);
@@ -1071,6 +1488,9 @@
   }
 
   function prepareForEdit() {
+    exitTrapMode();
+    invalidateComparison();
+
     if (state.trace || state.playing || state.phase !== 'idle') {
       resetRunState({ clearPredictionInput: true });
       showToast('地图已修改，本次回放已重置');
@@ -1230,6 +1650,7 @@
 
   function clearWalls() {
     hideResultOverlay();
+    exitTrapMode();
 
     let wallCount = 0;
     for (let y = 0; y < GRID_SIZE; y += 1) {
@@ -1244,6 +1665,7 @@
     }
 
     state.walls = makeWallGrid();
+    invalidateComparison();
     resetRunState({ clearPredictionInput: true });
     draw();
     showToast('障碍物已清空，重新布置地图吧');
@@ -1252,6 +1674,7 @@
 
   function generateRandomMap() {
     hideResultOverlay();
+    exitTrapMode();
 
     if (!Engine || typeof Engine.generateRandomWalls !== 'function') {
       showToast('寻路引擎未加载，无法生成随机地图');
@@ -1287,10 +1710,1393 @@
     generated[state.end.y][state.end.x] = false;
 
     state.walls = generated;
+    invalidateComparison();
     resetRunState({ clearPredictionInput: true });
     draw();
     showToast('随机地图已生成 · 按 Enter 开始并验证');
     announce('随机地图已生成，按回车键开始寻路。');
+  }
+
+  // =========================================================
+  // P1：三算法对比
+  // =========================================================
+
+  function engineHasCompare() {
+    return Boolean(Engine && typeof Engine.compareAlgorithms === 'function');
+  }
+
+  function navStyleFor(weight) {
+    return NAV_STYLES.find((style) => style.weight === weight) || NAV_STYLES[1];
+  }
+
+  function renderNavStyle() {
+    const current = navStyleFor(state.heuristicWeight);
+
+    dom.navStyleButtons.forEach((button) => {
+      const active = Number(button.dataset.weight) === current.weight;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-pressed', String(active));
+    });
+
+    dom.navStyleBadge.textContent = current.label;
+
+    if (dom.dataFootLabel) {
+      dom.dataFootLabel.textContent = state.tutorialDone ? '算法 / 启发函数' : '算法 / 距离估计';
+    }
+
+    // 术语在教程小测通过后才解锁；此前只用 g / h / f 讲机制。
+    if (state.tutorialDone) {
+      dom.navStyleTech.hidden = false;
+      dom.navStyleTech.textContent =
+        `技术名：启发函数 h（曼哈顿估计）· 启发权重 w = ${current.weight} · 加权 A*：f = g + w·h`;
+    } else {
+      dom.navStyleTech.hidden = true;
+      dom.navStyleTech.textContent = '';
+    }
+
+    if (dom.whyBtnHint) {
+      dom.whyBtnHint.textContent = state.tutorialDone ? '复习 3 步 + 小测' : '3 步 + 小测';
+    }
+  }
+
+  function selectNavStyle(weight) {
+    if (![0, 1, 2].includes(weight)) return;
+
+    state.heuristicWeight = weight;
+    state.navStyleSelected = true;
+    renderNavStyle();
+
+    // 切换风格后，旧 trace 与旧对比都不再对应当前设置
+    resetRunState();
+    clearComparisonView('导航风格已切换；卡片显示本次预演，打开「对比」可看完整表格。');
+    clearNavStyleResult();
+
+    const comparison = computeStyleComparison(weight);
+    if (!comparison) {
+      dom.navStyleResult.hidden = false;
+      dom.navStyleResult.textContent = '对比接口尚未就绪，暂时无法预演这一风格。';
+      renderFirstDivergence(weight);
+      if (state.trapSnapshot) refreshTrapPanel(null);
+      return;
+    }
+
+    renderStyleComparison(comparison, weight);
+    if (state.trapSnapshot) refreshTrapPanel(comparison);
+  }
+
+  function computeStyleComparison(weight) {
+    if (!isEngineReady() || !engineHasCompare()) return null;
+
+    try {
+      return Engine.compareAlgorithms(state.walls, state.start, state.end, {
+        heuristicWeight: weight
+      });
+    } catch (error) {
+      console.error('导航风格对比失败：', error);
+      return null;
+    }
+  }
+
+  function renderStyleComparison(comparison, weight) {
+    const astarData = comparison && comparison.astar ? comparison.astar : {};
+    const dijkstraData = comparison && comparison.dijkstra ? comparison.dijkstra : {};
+    const astarPath = astarData.found
+      ? Math.max(0, Number(astarData.pathMoves) || 0)
+      : null;
+    const dijkstraPath = dijkstraData.found
+      ? Math.max(0, Number(dijkstraData.pathMoves) || 0)
+      : null;
+    const expanded = Math.max(0, Number(astarData.expanded) || 0);
+
+    dom.navStyleResult.hidden = false;
+    dom.navStyleResult.textContent =
+      `A* 扩展 ${expanded} · A* 路径 ${pathText(astarPath)} · Dijkstra 路径 ${pathText(dijkstraPath)}`;
+
+    let note = '';
+    let noteState = 'info';
+
+    if (weight > 1) {
+      if (astarPath !== null && dijkstraPath !== null && astarPath > dijkstraPath) {
+        note = `这次激进绕远了：A* ${astarPath} 步 / Dijkstra ${dijkstraPath} 步。`;
+        noteState = 'warn';
+      } else if (astarPath === null || dijkstraPath === null) {
+        note = '这张地图没有可比较的路径；激进模式仍然不保证最短。';
+        noteState = 'caution';
+      } else {
+        note = '这次没绕远，但激进模式不再保证最短。';
+        noteState = 'caution';
+      }
+    }
+
+    dom.navStyleNote.hidden = !note;
+    dom.navStyleNote.dataset.state = noteState;
+    dom.navStyleNote.textContent = note;
+
+    renderFirstDivergence(weight);
+  }
+
+  function pathText(pathMoves) {
+    return pathMoves === null ? '无路' : `${pathMoves} 步`;
+  }
+
+  function clearNavStyleResult() {
+    dom.navStyleResult.hidden = true;
+    dom.navStyleResult.textContent = '';
+    dom.navStyleNote.hidden = true;
+    dom.navStyleNote.textContent = '';
+    dom.navStyleNote.dataset.state = 'info';
+    dom.navStyleDivergence.hidden = true;
+    dom.navStyleDivergence.textContent = '';
+  }
+
+  function collectExpandEvents(trace) {
+    if (!trace || !Array.isArray(trace.events)) return [];
+    return trace.events.filter((event) => event && event.type === 'expand');
+  }
+
+  function makeDivRow(label, node, alt) {
+    const row = document.createElement('div');
+    row.className = alt ? 'why-div-row why-div-row--alt' : 'why-div-row';
+
+    const tag = document.createElement('span');
+    tag.className = 'why-div-tag';
+    tag.textContent = label;
+
+    const text = document.createElement('span');
+    const x = Number.isFinite(node.x) ? node.x : Engine.fromKey(node.key).x;
+    const y = Number.isFinite(node.y) ? node.y : Engine.fromKey(node.key).y;
+    text.textContent = `选 (${x}, ${y})：g=${node.g} h=${node.h} f=${node.f}`;
+
+    row.append(tag, text);
+    return row;
+  }
+
+  function makeDivEmpty(message, warn = false) {
+    const line = document.createElement('p');
+    line.className = warn ? 'why-div-empty why-div-empty--warn' : 'why-div-empty';
+    line.textContent = message;
+    return line;
+  }
+
+  function computeVisitedDivergence(weight) {
+    if (!isEngineReady()) return { status: 'unavailable' };
+
+    let baseTrace;
+    let currentTrace;
+
+    try {
+      baseTrace = Engine.findPathTrace(state.walls, state.start, state.end, {
+        heuristicWeight: 1
+      });
+      currentTrace = weight === 1
+        ? baseTrace
+        : Engine.findPathTrace(state.walls, state.start, state.end, {
+          heuristicWeight: weight
+        });
+    } catch (error) {
+      console.error('首次分歧计算失败：', error);
+      return { status: 'error' };
+    }
+
+    if (!baseTrace || !currentTrace) {
+      return { status: 'unavailable', baseTrace, currentTrace };
+    }
+
+    if (!baseTrace.found || !currentTrace.found) {
+      return {
+        status: 'unfound',
+        baseTrace,
+        currentTrace,
+        bothLost: !baseTrace.found && !currentTrace.found
+      };
+    }
+
+    if (weight === 1) {
+      return { status: 'baseline', baseTrace, currentTrace };
+    }
+
+    const diffIndex = firstArrayDifference(
+      traceVisitOrder(baseTrace),
+      traceVisitOrder(currentTrace)
+    );
+
+    if (diffIndex < 0) {
+      return { status: 'none', baseTrace, currentTrace };
+    }
+
+    const baseNode = collectExpandEvents(baseTrace)[diffIndex];
+    const currentNode = collectExpandEvents(currentTrace)[diffIndex];
+
+    if (!baseNode || !currentNode) {
+      return { status: 'missing', diffIndex, baseTrace, currentTrace };
+    }
+
+    return {
+      status: 'diff',
+      diffIndex,
+      baseNode,
+      currentNode,
+      baseTrace,
+      currentTrace
+    };
+  }
+
+  // 首次分歧：标准（w=1）与当前风格在 visited 里第一个不同的扩展节点。
+  function renderFirstDivergence(weight) {
+    if (!dom.navStyleDivergence) return;
+
+    dom.navStyleDivergence.textContent = '';
+    dom.navStyleDivergence.hidden = false;
+
+    const result = computeVisitedDivergence(weight);
+    const style = navStyleFor(weight);
+
+    if (result.status === 'unavailable' || result.status === 'error') {
+      dom.navStyleDivergence.appendChild(
+        makeDivEmpty(
+          result.status === 'error'
+            ? '分歧计算失败，请重试。'
+            : '引擎未加载，无法比较扩展顺序。',
+          true
+        )
+      );
+      return;
+    }
+
+    if (result.status === 'unfound') {
+      dom.navStyleDivergence.appendChild(
+        makeDivEmpty(
+          result.bothLost
+            ? '无路/不可比较：两种风格都找不到路径，先清出可通行路线。'
+            : '无路/不可比较：其中一种风格找不到路径。',
+          true
+        )
+      );
+      return;
+    }
+
+    if (result.status === 'baseline') {
+      dom.navStyleDivergence.appendChild(
+        makeDivEmpty('「标准」就是比较基准，没有放大 h，所以没有分歧；选「稳妥」或「激进」看差别，或试绕路陷阱地图。')
+      );
+      return;
+    }
+
+    if (result.status === 'none') {
+      dom.navStyleDivergence.appendChild(
+        makeDivEmpty('这张图没有产生顺序分歧；试试绕路陷阱地图。')
+      );
+      return;
+    }
+
+    if (result.status === 'missing') {
+      dom.navStyleDivergence.appendChild(
+        makeDivEmpty('分歧位置缺少评分数据，无法显示。', true)
+      );
+      return;
+    }
+
+    const { diffIndex, baseNode, currentNode, baseTrace, currentTrace } = result;
+
+    const head = document.createElement('p');
+    head.className = 'why-div-head';
+    const headName = document.createElement('b');
+    headName.textContent = `标准 vs ${style.label}`;
+    head.append(
+      headName,
+      document.createTextNode(`：第一次分歧在第 ${diffIndex + 1} 个扩展节点`)
+    );
+    dom.navStyleDivergence.appendChild(head);
+    dom.navStyleDivergence.appendChild(makeDivRow('标准', baseNode, false));
+    dom.navStyleDivergence.appendChild(makeDivRow(style.label, currentNode, true));
+
+    if (weight === 0) {
+      dom.navStyleDivergence.appendChild(
+        makeDivFoot(state.tutorialDone
+          ? 'w = 0：h 不参与排序，f = g；搜索只按已走代价扩展。'
+          : '放大倍数 0：h 不参与排序，f = g；搜索只按已走代价扩展。')
+      );
+    } else {
+      const weightedH = weight * currentNode.h;
+      dom.navStyleDivergence.appendChild(
+        makeDivFoot(state.tutorialDone
+          ? `w = ${weight}：${weight}×h=${weightedH}，f=${currentNode.g} + ${weightedH} = ${currentNode.f}。`
+          : `h 放大 ${weight} 倍：${weight}×${currentNode.h} = ${weightedH}，f=${currentNode.g} + ${weightedH} = ${currentNode.f}。`)
+      );
+    }
+
+    const baseMoves = traceMoves(baseTrace);
+    const currentMoves = traceMoves(currentTrace);
+    const delta = currentMoves - baseMoves;
+    const deltaText = delta > 0
+      ? `多走 ${delta} 步`
+      : delta < 0
+        ? `少走 ${-delta} 步`
+        : '只有顺序分歧，步数相同';
+
+    dom.navStyleDivergence.appendChild(
+      makeDivFoot(`最终路径：标准 ${baseMoves} 步 → ${style.label} ${currentMoves} 步（${deltaText}）`)
+    );
+  }
+
+  function makeDivFoot(text) {
+    const foot = document.createElement('div');
+    foot.className = 'why-div-foot';
+    foot.textContent = text;
+    return foot;
+  }
+
+  // ---------- 绕路陷阱 ----------
+
+  function cloneWallGrid(walls) {
+    return walls.map((row) => row.slice());
+  }
+
+  function loadTrapMap() {
+    hideToast();
+    hideResultOverlay();
+
+    if (!isEngineReady()) {
+      showToast('寻路引擎未加载，无法载入陷阱地图');
+      return;
+    }
+
+    if (!state.trapSnapshot) {
+      state.trapSnapshot = {
+        walls: cloneWallGrid(state.walls),
+        start: { ...state.start },
+        end: { ...state.end },
+        weight: state.heuristicWeight,
+        navStyleSelected: state.navStyleSelected
+      };
+    }
+
+    state.walls = wallGridFromPairs(TRAP_MAP.walls);
+    state.start = { ...TRAP_MAP.start };
+    state.end = { ...TRAP_MAP.end };
+    state.walls[state.start.y][state.start.x] = false;
+    state.walls[state.end.y][state.end.x] = false;
+    state.heuristicWeight = 2;
+    state.navStyleSelected = true;
+    state.trapActive = true;
+
+    invalidateComparison();
+    resetRunState({ clearPredictionInput: true });
+    renderNavStyle();
+
+    const comparison = computeStyleComparison(2);
+
+    if (comparison) {
+      renderStyleComparison(comparison, 2);
+    } else {
+      dom.navStyleResult.hidden = false;
+      dom.navStyleResult.textContent = '陷阱地图已载入，但对比接口尚未就绪。';
+      renderFirstDivergence(2);
+    }
+
+    renderTrapPanel(comparison);
+    draw();
+    setStatus('idle', '陷阱地图已载入');
+    showToast('已载入绕路陷阱 · 激进风格');
+    announce('已载入绕路陷阱地图；激进风格可能绕远，看看路径差。');
+  }
+
+  function restoreTrapMap() {
+    const snapshot = state.trapSnapshot;
+
+    if (!snapshot) {
+      showToast('没有可恢复的原地图');
+      return;
+    }
+
+    state.walls = cloneWallGrid(snapshot.walls);
+    state.start = { ...snapshot.start };
+    state.end = { ...snapshot.end };
+    state.heuristicWeight = snapshot.weight;
+    state.navStyleSelected = snapshot.navStyleSelected;
+    state.trapSnapshot = null;
+    state.trapActive = false;
+
+    dom.trapMapPanel.hidden = true;
+    dom.trapMapPanel.dataset.state = 'info';
+    dom.trapMapText.textContent = '';
+
+    invalidateComparison();
+    resetRunState({ clearPredictionInput: true });
+    renderNavStyle();
+
+    if (state.navStyleSelected) {
+      const comparison = computeStyleComparison(state.heuristicWeight);
+      if (comparison) {
+        renderStyleComparison(comparison, state.heuristicWeight);
+      } else {
+        renderFirstDivergence(state.heuristicWeight);
+      }
+    }
+
+    draw();
+    setStatus('idle', '已回到原地图');
+    showToast('已回到原地图');
+    announce('已恢复载入陷阱前的地图。');
+  }
+
+  function refreshTrapPanel(comparison = null) {
+    if (!state.trapSnapshot) {
+      dom.trapMapPanel.hidden = true;
+      return;
+    }
+
+    renderTrapPanel(comparison);
+  }
+
+  function exitTrapMode() {
+    state.trapSnapshot = null;
+    state.trapActive = false;
+    dom.trapMapPanel.hidden = true;
+    dom.trapMapPanel.dataset.state = 'info';
+    dom.trapMapText.textContent = '';
+  }
+
+  function renderTrapPanel(comparison) {
+    if (!state.trapSnapshot) {
+      dom.trapMapPanel.hidden = true;
+      return;
+    }
+
+    dom.trapMapPanel.hidden = false;
+    dom.trapMapPanel.dataset.state = 'info';
+
+    if (!state.trapActive || state.heuristicWeight !== 2) {
+      dom.trapMapText.textContent = state.tutorialDone
+        ? '陷阱地图仍载入中；绕远演示使用「激进」（w = 2），切回激进可重新对比。'
+        : '陷阱地图仍载入中；绕远演示使用「激进」并把 h 放大 2 倍，切回激进可重新对比。';
+      return;
+    }
+
+    if (!comparison) {
+      dom.trapMapText.textContent = '陷阱地图已载入，但对比接口尚未就绪，暂时无法展示路径差。';
+      return;
+    }
+
+    const astar = comparison.astar || {};
+    const dijkstra = comparison.dijkstra || {};
+
+    if (!astar.found || !dijkstra.found) {
+      dom.trapMapPanel.dataset.state = 'warn';
+      dom.trapMapText.textContent = '这张图上有一方无路，无法比较路径；点「回到原地图」恢复。';
+      return;
+    }
+
+    const astarMoves = Math.max(0, Number(astar.pathMoves) || 0);
+    const dijkstraMoves = Math.max(0, Number(dijkstra.pathMoves) || 0);
+    const astarExpanded = Math.max(0, Number(astar.expanded) || 0);
+    const dijkstraExpanded = Math.max(0, Number(dijkstra.expanded) || 0);
+    const delta = astarMoves - dijkstraMoves;
+
+    if (delta > 0) {
+      dom.trapMapPanel.dataset.state = 'warn';
+      dom.trapMapText.textContent =
+        `陷阱生效：激进 ${astarMoves} 步，最短 ${dijkstraMoves} 步，多走 ${delta} 步；扩展 ${astarExpanded} / Dijkstra ${dijkstraExpanded}。`;
+      return;
+    }
+
+    const divergence = computeVisitedDivergence(2);
+
+    if (divergence.status === 'diff') {
+      dom.trapMapText.textContent =
+        `这张图只有顺序分歧：路径同为 ${astarMoves} 步，第一次分歧在第 ${divergence.diffIndex + 1} 个扩展节点；没有更长路径，不伪造。`;
+    } else if (divergence.status === 'none' || divergence.status === 'baseline') {
+      dom.trapMapText.textContent =
+        `这张图没有顺序分歧：路径同为 ${astarMoves} 步，不伪造绕路。`;
+    } else {
+      dom.trapMapText.textContent =
+        `路径没有变长（${astarMoves} 步），顺序分歧也无法比较；不伪造绕路。`;
+    }
+  }
+
+  // ---------- 3 步教程 + 机制小测 ----------
+
+  function readWhyTutorialDone() {
+    try {
+      return window.localStorage.getItem(WHY_STORAGE_KEY) === '1';
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function persistWhyTutorialDone() {
+    try {
+      window.localStorage.setItem(WHY_STORAGE_KEY, '1');
+    } catch (error) {
+      // 隐私模式或存储被禁用时静默失败
+    }
+  }
+
+  function initWhyTutorial() {
+    renderWhyOptions('predict1', WHY_CANDIDATES.plain, dom.whyOptionsPredict1);
+    renderWhyOptions('predict2', WHY_CANDIDATES.weighted, dom.whyOptionsPredict2);
+    renderWhyOptions('quiz', WHY_QUIZ_OPTIONS, dom.whyOptionsQuiz);
+    renderWhyTutorial();
+  }
+
+  function renderWhyOptions(questionKey, options, container) {
+    if (!container) return;
+
+    container.textContent = '';
+    container.setAttribute('role', 'group');
+    container.setAttribute(
+      'aria-label',
+      questionKey === 'quiz' ? '机制小测选项' : '候选节点'
+    );
+
+    options.forEach((option) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'why-option';
+      button.dataset.whyQuestion = questionKey;
+      button.dataset.whyKey = option.key;
+      button.setAttribute('aria-pressed', 'false');
+
+      const key = document.createElement('span');
+      key.className = 'why-option-key';
+      key.setAttribute('aria-hidden', 'true');
+      key.textContent = option.key;
+      button.appendChild(key);
+
+      if (questionKey === 'quiz') {
+        const title = document.createElement('span');
+        title.className = 'why-option-title';
+        title.textContent = option.text;
+        button.appendChild(title);
+      } else {
+        const math = document.createElement('span');
+        math.className = 'why-option-math';
+        math.textContent = questionKey === 'predict2'
+          ? `${option.g} + 2×${option.h} = ${option.f}`
+          : `g=${option.g} · h=${option.h} · f=${option.f}`;
+        button.appendChild(math);
+      }
+
+      container.appendChild(button);
+    });
+  }
+
+  function onWhyOptionClick(event) {
+    const button = event.target instanceof Element
+      ? event.target.closest('.why-option')
+      : null;
+    if (!button) return;
+
+    const questionKey = button.dataset.whyQuestion;
+    const answer = state.tutorialAnswers[questionKey];
+    if (!answer || answer.solved) return;
+
+    const options = questionKey === 'predict1'
+      ? WHY_CANDIDATES.plain
+      : questionKey === 'predict2'
+        ? WHY_CANDIDATES.weighted
+        : WHY_QUIZ_OPTIONS;
+    const option = options.find((item) => item.key === button.dataset.whyKey);
+    if (!option) return;
+
+    answer.picked = option.key;
+    answer.solved = Boolean(option.correct);
+
+    if (questionKey === 'quiz' && answer.solved) {
+      unlockWhyTerms();
+      renderWhyTutorial();
+      requestAnimationFrame(() => {
+        dom.whyTerms.scrollIntoView({
+          block: 'nearest',
+          behavior: reduceMotion ? 'auto' : 'smooth'
+        });
+        dom.whyDone.focus({ preventScroll: true });
+      });
+      return;
+    }
+
+    renderWhyTutorial();
+
+    if (answer.solved) {
+      requestAnimationFrame(() => {
+        dom.whyNext.focus({ preventScroll: true });
+      });
+    }
+  }
+
+  function unlockWhyTerms() {
+    dom.whyTerms.hidden = false;
+
+    if (state.tutorialDone) return;
+
+    state.tutorialDone = true;
+    persistWhyTutorialDone();
+    renderNavStyle();
+
+    if (state.navStyleSelected) {
+      const comparison = computeStyleComparison(state.heuristicWeight);
+      if (comparison) {
+        renderStyleComparison(comparison, state.heuristicWeight);
+        if (state.trapSnapshot) refreshTrapPanel(comparison);
+      } else {
+        renderFirstDivergence(state.heuristicWeight);
+      }
+    }
+
+    updateDecisionHint(state.trace ? buildEventView(state.eventIndex) : null);
+  }
+
+  function getWhyAnswerForStep(step) {
+    if (step === 1) return state.tutorialAnswers.predict1;
+    if (step === 2) return state.tutorialAnswers.predict2;
+    if (step === 3) return state.tutorialAnswers.quiz;
+    return null;
+  }
+
+  function renderWhyTutorial() {
+    if (!state.tutorialOpen) return;
+
+    const step = clamp(state.tutorialStep, 0, 3);
+    state.tutorialStep = step;
+
+    dom.whySteps.forEach((section) => {
+      section.hidden = Number(section.dataset.whyStep) !== step;
+    });
+
+    dom.whyDots.forEach((dot) => {
+      const index = Number(dot.dataset.whyDot);
+      dot.classList.toggle('is-active', index === step);
+      dot.classList.toggle(
+        'is-done',
+        index < step || (index === 3 && state.tutorialDone)
+      );
+    });
+
+    dom.whyStepCount.textContent = `${step + 1} / 4`;
+
+    const currentAnswer = getWhyAnswerForStep(step);
+    const quizSolved = state.tutorialAnswers.quiz.solved;
+
+    dom.whyBack.disabled = step === 0;
+    dom.whyNext.hidden = step === 3;
+    dom.whyDone.hidden = step !== 3;
+    dom.whyDone.disabled = !(quizSolved || state.tutorialDone);
+    dom.whyNext.disabled = step > 0
+      && !state.tutorialDone
+      && !(currentAnswer && currentAnswer.solved);
+
+    syncWhyOptions('predict1', WHY_CANDIDATES.plain, dom.whyOptionsPredict1);
+    syncWhyOptions('predict2', WHY_CANDIDATES.weighted, dom.whyOptionsPredict2);
+    syncWhyOptions('quiz', WHY_QUIZ_OPTIONS, dom.whyOptionsQuiz);
+
+    renderWhyFeedback(
+      dom.whyFeedbackPredict1,
+      state.tutorialAnswers.predict1,
+      'A 的 f=9 最小（B=10，C=12），所以先扩展 A。',
+      '先只看 f 这一列：9 < 10 < 12。再点一次。'
+    );
+
+    renderWhyFeedback(
+      dom.whyFeedbackPredict2,
+      state.tutorialAnswers.predict2,
+      '现在变成 B：7 + 2×3 = 13 最小。A 从 9 变成 15，B 从 10 变成 13——h 更小的 B 反超了；但 h 仍然只是估计。',
+      '把每个 h 乘以 2 再和 g 相加：A=15，B=13，C=19。再选一次。'
+    );
+
+    renderWhyFeedback(
+      dom.whyFeedbackQuiz,
+      state.tutorialAnswers.quiz,
+      '对。放大的只是 h 的估计，它不会变成真实距离；搜索因此可能更少，但路径可能变长，不再保证最短。',
+      '再想想：h 只是估计，放大它不会变成真实距离；把 h 放大后也不保证最短。可以再选一次。'
+    );
+
+    dom.whyTerms.hidden = !(quizSolved || state.tutorialDone);
+  }
+
+  function syncWhyOptions(questionKey, options, container) {
+    if (!container) return;
+
+    const answer = state.tutorialAnswers[questionKey];
+    const optionByKey = new Map(options.map((option) => [option.key, option]));
+
+    Array.from(container.querySelectorAll('.why-option')).forEach((button) => {
+      const key = button.dataset.whyKey;
+      const option = optionByKey.get(key);
+      const isCorrect = Boolean(option && option.correct);
+      const isPicked = answer.picked === key;
+
+      button.classList.toggle('is-selected', isPicked && !answer.solved);
+      button.classList.toggle('is-correct', answer.solved && isCorrect);
+      button.classList.toggle('is-wrong', isPicked && !answer.solved && !isCorrect);
+      button.setAttribute('aria-pressed', String(isPicked));
+      button.disabled = answer.solved;
+    });
+  }
+
+  function renderWhyFeedback(element, answer, correctText, wrongText) {
+    if (!element) return;
+
+    if (answer.solved) {
+      element.hidden = false;
+      element.className = 'why-feedback is-correct';
+      element.textContent = correctText;
+    } else if (answer.picked) {
+      element.hidden = false;
+      element.className = 'why-feedback is-wrong';
+      element.textContent = wrongText;
+    } else {
+      element.hidden = true;
+      element.className = 'why-feedback';
+      element.textContent = '';
+    }
+  }
+
+  function goToWhyStep(nextStep) {
+    const target = clamp(nextStep, 0, 3);
+
+    if (target > state.tutorialStep && state.tutorialStep > 0 && !state.tutorialDone) {
+      const answer = getWhyAnswerForStep(state.tutorialStep);
+      if (!answer || !answer.solved) return;
+    }
+
+    state.tutorialStep = target;
+    renderWhyTutorial();
+  }
+
+  function openWhyTutorial() {
+    if (state.tutorialOpen) return;
+
+    if (state.tutorialDone) {
+      state.tutorialStep = 0;
+    }
+
+    state.tutorialOpen = true;
+    pausePlayback({ silent: true });
+    hideResultOverlay();
+
+    dom.whyBackdrop.hidden = false;
+    dom.whyModal.hidden = false;
+    dom.whyBtn.setAttribute('aria-expanded', 'true');
+    document.body.classList.add('astar-why-open');
+    if (dom.appShell) dom.appShell.inert = true;
+
+    renderWhyTutorial();
+
+    requestAnimationFrame(() => {
+      dom.whyClose.focus({ preventScroll: true });
+    });
+  }
+
+  function onWhyModalKeyDown(event) {
+    if (event.key !== 'Tab') return;
+
+    const focusables = Array.from(
+      dom.whyModal.querySelectorAll(
+        'button:not(:disabled):not([hidden]), [href], [tabindex]:not([tabindex="-1"])'
+      )
+    ).filter((element) => element.getClientRects().length > 0);
+
+    if (focusables.length === 0) return;
+
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  function closeWhyTutorial({ completed = false } = {}) {
+    if (!state.tutorialOpen) return;
+
+    state.tutorialOpen = false;
+    dom.whyBackdrop.hidden = true;
+    dom.whyModal.hidden = true;
+    dom.whyBtn.setAttribute('aria-expanded', 'false');
+    document.body.classList.remove('astar-why-open');
+    if (dom.appShell && !state.detailDrawerOpen) {
+      dom.appShell.inert = false;
+    }
+    dom.whyBtn.focus({ preventScroll: true });
+
+    if (completed) {
+      showToast('教程完成 · 术语已解锁');
+      announce('教程完成，已解锁启发函数、启发权重与加权 A* 术语。');
+    }
+  }
+
+  function clearComparisonView(message = '尚未运行对比；点击按钮分析当前地图。') {
+    dom.compareTableWrap.hidden = true;
+    dom.compareBody.textContent = '';
+    dom.compareStatus.textContent = message;
+  }
+
+  function invalidateComparison() {
+    const hadResults = !dom.compareTableWrap.hidden || !dom.navStyleResult.hidden;
+    if (hadResults) {
+      clearComparisonView('地图已修改，请重新运行对比。');
+    }
+    clearNavStyleResult();
+  }
+
+  function runComparison() {
+    hideToast();
+
+    if (!isEngineReady() || !engineHasCompare()) {
+      dom.compareStatus.textContent = '对比接口尚未就绪：等待 astar-engine.js 提供 compareAlgorithms。';
+      showToast('对比接口尚未就绪，请等待引擎更新');
+      return;
+    }
+
+    let comparison;
+    try {
+      comparison = Engine.compareAlgorithms(state.walls, state.start, state.end, {
+        heuristicWeight: state.heuristicWeight
+      });
+    } catch (error) {
+      console.error('算法对比失败：', error);
+      dom.compareStatus.textContent = '对比运行失败，请重试。';
+      showToast('对比运行失败，请重试');
+      return;
+    }
+
+    if (!renderComparison(comparison)) {
+      dom.compareStatus.textContent = '引擎返回的对比数据不完整。';
+      showToast('对比数据不完整，请重试');
+      return;
+    }
+
+    announce(`算法对比完成。${dom.compareStatus.textContent}`);
+  }
+
+  function renderComparison(comparison) {
+    if (!comparison || typeof comparison !== 'object') return false;
+
+    const rows = COMPARE_ROWS.map((meta) => {
+      const data = comparison[meta.key];
+      return data && typeof data === 'object' ? { ...meta, data } : null;
+    });
+
+    if (rows.some((row) => row === null)) return false;
+
+    dom.compareBody.textContent = '';
+
+    rows.forEach(({ key, label, data }) => {
+      const row = document.createElement('tr');
+      if (key === 'astar') row.className = 'is-astar';
+
+      const nameCell = document.createElement('th');
+      nameCell.scope = 'row';
+      nameCell.textContent = label;
+
+      const expandedCell = document.createElement('td');
+      expandedCell.textContent = String(Math.max(0, Number(data.expanded) || 0));
+
+      const found = Boolean(data.found);
+      const pathCell = document.createElement('td');
+      pathCell.textContent = found ? String(Math.max(0, Number(data.pathMoves) || 0)) : '无路';
+      if (!found) pathCell.className = 'is-empty';
+
+      const timeCell = document.createElement('td');
+      timeCell.textContent = formatMs(data.computeMs);
+
+      row.append(nameCell, expandedCell, pathCell, timeCell);
+      dom.compareBody.appendChild(row);
+    });
+
+    const astarExpanded = Math.max(0, Number(comparison.astar.expanded) || 0);
+    const bfsExpanded = Math.max(0, Number(comparison.bfs.expanded) || 0);
+
+    let summary;
+    if (astarExpanded < bfsExpanded) {
+      summary = `A* 比 BFS 少扩展 ${bfsExpanded - astarExpanded} 个节点。`;
+    } else if (astarExpanded === bfsExpanded) {
+      summary = 'A* 与 BFS 的扩展节点数相同。';
+    } else {
+      summary = `A* 比 BFS 多扩展 ${astarExpanded - bfsExpanded} 个节点。`;
+    }
+
+    const pathSet = new Set(
+      rows.map(({ data }) => (data.found ? Math.max(0, Number(data.pathMoves) || 0) : 'none'))
+    );
+    if (rows.every(({ data }) => !data.found)) {
+      summary += ' 三种算法都报告无路。';
+    } else if (pathSet.size === 1) {
+      summary += ' 三种算法的路径步数一致。';
+    } else {
+      summary += ' 三种算法的路径步数或可达性不同。';
+    }
+
+    const style = navStyleFor(state.heuristicWeight);
+    let styleNote = state.tutorialDone
+      ? `当前风格：${style.label}（w = ${state.heuristicWeight}）`
+      : `当前风格：${style.label}`;
+    if (state.heuristicWeight > 1) {
+      styleNote += ' · 不保证最短路径';
+      if (
+        comparison.astar.found &&
+        comparison.dijkstra.found &&
+        astarPathMoves(comparison.astar) > astarPathMoves(comparison.dijkstra)
+      ) {
+        styleNote += ` · 这次激进绕远了（A* ${astarPathMoves(comparison.astar)} 步 / Dijkstra ${astarPathMoves(comparison.dijkstra)} 步）`;
+      }
+    }
+
+    dom.compareStatus.textContent = `${styleNote}。${summary}`;
+    dom.compareTableWrap.hidden = false;
+    return true;
+  }
+
+  function astarPathMoves(data) {
+    return Math.max(0, Number(data && data.pathMoves) || 0);
+  }
+
+  // =========================================================
+  // P1：关卡地图、检查与小测
+  // =========================================================
+
+  function initLevels() {
+    refreshLevelMastery();
+    selectLevel(state.levelId);
+  }
+
+  function selectLevel(levelId) {
+    const level = LEVELS[levelId];
+    if (!level) return;
+
+    state.levelId = levelId;
+
+    dom.levelTabs.forEach((button) => {
+      const active = button.dataset.level === levelId;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-pressed', String(active));
+    });
+
+    dom.levelKicker.textContent = level.kicker;
+    dom.levelGoal.textContent = level.goal;
+    dom.levelMeta.textContent = level.meta;
+    dom.quizQuestion.textContent = level.quiz.question;
+    dom.quizFeedback.hidden = true;
+    dom.quizFeedback.className = 'quiz-feedback';
+
+    renderQuizOptions();
+    renderLevelFeedback();
+    renderLevelProgress();
+  }
+
+  function loadLevel(levelId) {
+    const level = LEVELS[levelId];
+    if (!level) return;
+
+    hideToast();
+    applyLevelMap(levelId);
+
+    const runtime = state.levelRuntime[levelId];
+    runtime.loaded = true;
+    runtime.checked = false;
+    runtime.passed = false;
+    runtime.feedback = {
+      state: 'info',
+      text: `已载入「${level.name}」地图。答对下方小测即可掌握本关。`
+    };
+
+    selectLevel(levelId);
+    setStatus('idle', '关卡地图已载入');
+    showToast(`已载入关卡：${level.name}`);
+    announce(`已载入关卡 ${level.name}。${level.goal}`);
+  }
+
+  function applyLevelMap(levelId) {
+    const level = LEVELS[levelId];
+    exitTrapMode();
+
+    if (levelId === 'tiebreak' && level) {
+      state.walls = wallGridFromPairs(level.walls);
+      state.start = { x: level.start.x, y: level.start.y };
+      state.end = { x: level.end.x, y: level.end.y };
+    } else {
+      state.walls = makeWallGrid();
+      state.start = { x: 3, y: 10 };
+      state.end = { x: 16, y: 10 };
+
+      if (levelId === 'unreachable') {
+        [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dx, dy]) => {
+          const x = state.end.x + dx;
+          const y = state.end.y + dy;
+          if (isInside(x, y)) {
+            state.walls[y][x] = true;
+          }
+        });
+      }
+    }
+
+    // 编辑层不变量：起点和终点永远可通行
+    state.walls[state.start.y][state.start.x] = false;
+    state.walls[state.end.y][state.end.x] = false;
+    invalidateComparison();
+    resetRunState({ clearPredictionInput: true });
+  }
+
+  function checkSelectedLevel() {
+    const levelId = state.levelId;
+    const level = LEVELS[levelId];
+    const runtime = state.levelRuntime[levelId];
+    if (!level) return;
+
+    let outcome;
+    try {
+      outcome = evaluateLevel(levelId);
+    } catch (error) {
+      console.error('关卡检查失败：', error);
+      runtime.feedback = {
+        state: 'fail',
+        text: `检查失败：${error.message || '请稍后重试'}`
+      };
+      renderLevelFeedback();
+      showToast(error.message || '关卡检查失败，请重试');
+      return;
+    }
+
+    if (!outcome) return;
+
+    runtime.checked = true;
+    runtime.passed = Boolean(outcome.passed);
+    runtime.feedback = {
+      state: outcome.passed ? 'pass' : 'fail',
+      text: `${outcome.passed ? '✓ 目标达成。' : '✗ 尚未达成。'} ${outcome.detail}`
+    };
+
+    renderLevelFeedback();
+    persistLevel(levelId);
+    showToast(
+      outcome.passed ? '✓ 目标已通过，掌握度已更新' : '目标未通过，打开任务详情查看提示',
+      2800
+    );
+    announce(`${level.name}：${outcome.passed ? '目标通过' : '目标未通过'}。${outcome.detail}`);
+  }
+
+  function evaluateLevel(levelId) {
+    if (levelId === 'heuristic') return evaluateHeuristicLevel();
+    if (levelId === 'tiebreak') return evaluateTiebreakLevel();
+    if (levelId === 'unreachable') return evaluateUnreachableLevel();
+    return null;
+  }
+
+  function evaluateHeuristicLevel() {
+    if (!engineHasCompare()) {
+      throw new Error('对比接口尚未就绪，请等待引擎更新');
+    }
+
+    const comparison = Engine.compareAlgorithms(state.walls, state.start, state.end);
+    if (!renderComparison(comparison)) {
+      throw new Error('引擎返回的对比数据不完整');
+    }
+
+    const astarExpanded = Math.max(0, Number(comparison.astar.expanded) || 0);
+    const bfsExpanded = Math.max(0, Number(comparison.bfs.expanded) || 0);
+    const passed = astarExpanded < bfsExpanded;
+
+    const detail = passed
+      ? `A* 扩展 ${astarExpanded} 个节点，BFS 扩展 ${bfsExpanded} 个，A* 更少。`
+      : `A* 扩展 ${astarExpanded} 个，BFS 扩展 ${bfsExpanded} 个；A* 没有更少。试试载入关卡地图，保持空地图与 (3,10) → (16,10)。`;
+
+    return { passed, detail };
+  }
+
+  function evaluateTiebreakLevel() {
+    if (!Engine || typeof Engine.findPathTrace !== 'function') {
+      throw new Error('寻路引擎未加载');
+    }
+
+    const level = LEVELS.tiebreak;
+    const walls = wallGridFromPairs(level.walls);
+    const traceH = Engine.findPathTrace(walls, level.start, level.end, { tieBreak: 'h' });
+    const traceKey = Engine.findPathTrace(walls, level.start, level.end, { tieBreak: 'key' });
+
+    if (!traceH || !traceKey) {
+      throw new Error('引擎没有返回完整的 trace');
+    }
+
+    const movesH = traceMoves(traceH);
+    const movesK = traceMoves(traceKey);
+    const visitedH = traceVisitOrder(traceH);
+    const visitedK = traceVisitOrder(traceKey);
+    const diffIndex = firstArrayDifference(visitedH, visitedK);
+    const orderDiff = diffIndex >= 0;
+    const sameMoves = Boolean(traceH.found && traceKey.found && movesH === movesK);
+    const passed = sameMoves && orderDiff;
+
+    let detail = `固定地图：路径步数 h=${movesH} / key=${movesK}；访问顺序${orderDiff ? '不同' : '相同'}。`;
+    if (orderDiff) {
+      detail += ` 首次分歧在第 ${diffIndex + 1} 个访问节点：h→(${pointText(visitedH[diffIndex])})，key→(${pointText(visitedK[diffIndex])})。`;
+    } else {
+      detail += ' 若引擎尚未实现 tieBreak，请等待引擎更新后再检查。';
+    }
+    detail += ` 扩展节点 h=${traceExpanded(traceH)} / key=${traceExpanded(traceKey)}。`;
+
+    return { passed, detail };
+  }
+
+  function evaluateUnreachableLevel() {
+    if (!Engine || typeof Engine.findPathTrace !== 'function') {
+      throw new Error('寻路引擎未加载');
+    }
+
+    const trace = Engine.findPathTrace(state.walls, state.start, state.end);
+    if (!trace || typeof trace.found !== 'boolean') {
+      throw new Error('引擎没有返回完整的 trace');
+    }
+
+    const expanded = traceExpanded(trace);
+    const passed = trace.found === false && expanded > 0;
+
+    let detail;
+    if (trace.found) {
+      detail = '当前地图仍能到达终点；请载入关卡地图，封死终点的上下左右四个邻居。';
+    } else if (expanded <= 0) {
+      detail = 'A* 返回了无路，但扩展节点数为 0；请保留至少一个可达节点供搜索。';
+    } else {
+      detail = `A* 返回无路，并扩展了 ${expanded} 个可达节点。`;
+    }
+
+    return { passed, detail };
+  }
+
+  function traceMoves(trace) {
+    if (!trace || !trace.found) return -1;
+    const metrics = trace.metrics || {};
+    const moves = Number(metrics.pathMoves);
+    if (Number.isFinite(moves)) return Math.max(0, moves);
+    return Array.isArray(trace.path) ? Math.max(0, trace.path.length - 1) : 0;
+  }
+
+  function traceExpanded(trace) {
+    return Math.max(0, Number(trace && trace.metrics && trace.metrics.expanded) || 0);
+  }
+
+  function traceVisitOrder(trace) {
+    if (!trace) return [];
+    if (Array.isArray(trace.visited) && trace.visited.length > 0) {
+      return trace.visited;
+    }
+    if (Array.isArray(trace.events)) {
+      return trace.events
+        .filter((event) => event && event.type === 'expand')
+        .map((event) => event.key);
+    }
+    return [];
+  }
+
+  function firstArrayDifference(a, b) {
+    const length = Math.max(a.length, b.length);
+    for (let i = 0; i < length; i += 1) {
+      if (a[i] !== b[i]) return i;
+    }
+    return -1;
+  }
+
+  function pointText(key) {
+    if (!Number.isFinite(key)) return '—';
+    const point = fromKey(key);
+    return `${point.x}, ${point.y}`;
+  }
+
+  function wallGridFromPairs(pairs) {
+    const grid = makeWallGrid();
+    (Array.isArray(pairs) ? pairs : []).forEach(([x, y]) => {
+      if (isInside(x, y)) grid[y][x] = true;
+    });
+    return grid;
+  }
+
+  function renderQuizOptions() {
+    const level = LEVELS[state.levelId];
+    const runtime = state.levelRuntime[state.levelId];
+    if (!level) return;
+
+    dom.quizOptions.textContent = '';
+
+    level.quiz.options.forEach((option, index) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'quiz-option';
+      button.dataset.index = String(index);
+      button.setAttribute('role', 'radio');
+      button.setAttribute('aria-checked', String(runtime.quizIndex === index));
+      if (runtime.quizIndex === index) button.classList.add('is-selected');
+
+      const key = document.createElement('span');
+      key.className = 'quiz-option-key';
+      key.setAttribute('aria-hidden', 'true');
+      key.textContent = String.fromCharCode(65 + index);
+
+      const text = document.createElement('span');
+      text.className = 'quiz-option-text';
+      text.textContent = option.text;
+
+      button.append(key, text);
+      dom.quizOptions.appendChild(button);
+    });
+  }
+
+  function onQuizOptionClick(event) {
+    const button = event.target instanceof Element
+      ? event.target.closest('.quiz-option')
+      : null;
+    if (!button || !dom.quizOptions.contains(button)) return;
+
+    const runtime = state.levelRuntime[state.levelId];
+    runtime.quizIndex = Number(button.dataset.index);
+
+    Array.from(dom.quizOptions.querySelectorAll('.quiz-option')).forEach((option, index) => {
+      const selected = index === runtime.quizIndex;
+      option.classList.toggle('is-selected', selected);
+      option.classList.remove('is-correct', 'is-wrong');
+      option.setAttribute('aria-checked', String(selected));
+    });
+
+    dom.quizFeedback.hidden = true;
+  }
+
+  function submitQuiz() {
+    const level = LEVELS[state.levelId];
+    const runtime = state.levelRuntime[state.levelId];
+    if (!level) return;
+
+    if (runtime.quizIndex === null) {
+      showToast('请先选择一个答案');
+      return;
+    }
+
+    const selected = level.quiz.options[runtime.quizIndex];
+    if (!selected) return;
+
+    runtime.quizCorrect = Boolean(selected.correct) || runtime.quizCorrect;
+    if (selected.correct) runtime.passed = true;
+
+    Array.from(dom.quizOptions.querySelectorAll('.quiz-option')).forEach((button, index) => {
+      button.classList.remove('is-correct', 'is-wrong');
+      if (index === runtime.quizIndex) {
+        button.classList.add(selected.correct ? 'is-correct' : 'is-wrong');
+      } else if (!selected.correct && level.quiz.options[index].correct) {
+        button.classList.add('is-correct');
+      }
+    });
+
+    dom.quizFeedback.hidden = false;
+    dom.quizFeedback.className = `quiz-feedback ${selected.correct ? 'is-correct' : 'is-wrong'}`;
+    dom.quizFeedback.textContent = selected.correct
+      ? `✓ 回答正确。${level.quiz.hint}`
+      : `✗ 再想想。提示：${level.quiz.hint}`;
+
+    persistLevel(state.levelId);
+    announce(selected.correct ? '小测回答正确，已记录进度。' : '小测回答错误，可以再试一次。');
+  }
+
+  function persistLevel(levelId) {
+    const runtime = state.levelRuntime[levelId];
+    if (!runtime) return;
+
+    const record = getStoredLevels()[levelId] || {};
+    const passed = Boolean(runtime.passed || record.passed);
+    const quizCorrect = Boolean(runtime.quizCorrect || record.quizCorrect);
+
+    let saved = false;
+    try {
+      if (window.ProgressStore && typeof window.ProgressStore.recordLevel === 'function') {
+        window.ProgressStore.recordLevel('astar', levelId, { passed, quizCorrect });
+        saved = true;
+      }
+    } catch (error) {
+      console.warn('关卡进度写入失败：', error);
+    }
+
+    refreshLevelMastery();
+
+    if (!saved) {
+      showToast('进度存储不可用，本次仅保留在页面内');
+    }
+  }
+
+  function getStoredLevels() {
+    try {
+      if (window.ProgressStore && typeof window.ProgressStore.getLevels === 'function') {
+        return window.ProgressStore.getLevels('astar') || {};
+      }
+    } catch (error) {
+      console.warn('关卡进度读取失败：', error);
+    }
+    return {};
+  }
+
+  function refreshLevelMastery() {
+    updateLevelBadges();
+    renderLevelProgress();
+  }
+
+  function updateLevelBadges() {
+    const stored = getStoredLevels();
+
+    dom.levelTabs.forEach((button) => {
+      const levelId = button.dataset.level;
+      const badge = button.querySelector('.level-mastery');
+      if (!badge) return;
+
+      const record = stored[levelId] || {};
+      const runtime = state.levelRuntime[levelId] || {};
+      const passed = Boolean(record.passed || runtime.passed);
+      const quizCorrect = Boolean(record.quizCorrect || runtime.quizCorrect);
+      const mastered = quizCorrect;
+      const partial = passed && !quizCorrect;
+
+      badge.textContent = mastered ? '已掌握' : partial ? '进行中' : '未掌握';
+      badge.dataset.state = mastered ? 'mastered' : partial ? 'partial' : 'idle';
+      button.classList.toggle('is-mastered', mastered);
+    });
+  }
+
+  function renderLevelProgress() {
+    const levelId = state.levelId;
+    const runtime = state.levelRuntime[levelId];
+    if (!runtime) return;
+
+    const record = getStoredLevels()[levelId] || {};
+    const passed = Boolean(record.passed || runtime.passed);
+    const quizCorrect = Boolean(record.quizCorrect || runtime.quizCorrect);
+
+    dom.levelQuizPill.dataset.state = quizCorrect ? 'pass' : 'idle';
+    dom.levelQuizPill.textContent = quizCorrect ? '小测已通过' : '小测待完成';
+
+    let masteryState = 'idle';
+    let masteryText = '未掌握';
+    if (quizCorrect) {
+      masteryState = 'mastered';
+      masteryText = '已掌握';
+    } else if (passed) {
+      masteryState = 'partial';
+      masteryText = '已完成 · 小测待完成';
+    }
+
+    dom.levelMasteryText.dataset.state = masteryState;
+    dom.levelMasteryText.textContent = masteryText;
+  }
+
+  function renderLevelFeedback() {
+    const runtime = state.levelRuntime[state.levelId];
+    if (!runtime) return;
+
+    if (!runtime.feedback) {
+      dom.levelFeedback.dataset.state = 'idle';
+      dom.levelFeedback.textContent = '选择关卡并载入地图；答对小测即可掌握本关。';
+      return;
+    }
+
+    dom.levelFeedback.dataset.state = runtime.feedback.state || 'idle';
+    dom.levelFeedback.textContent = runtime.feedback.text || '';
   }
 
   // =========================================================
@@ -1300,7 +3106,24 @@
   function onKeyDown(event) {
     if (event.defaultPrevented || event.isComposing) return;
     if (event.ctrlKey || event.metaKey || event.altKey) return;
+
+    if (state.tutorialOpen) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeWhyTutorial();
+      }
+      return;
+    }
+
     if (docsViewer && docsViewer.isOpen()) return;
+
+    if (state.detailDrawerOpen) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeLevelDetails();
+      }
+      return;
+    }
 
     const target = event.target;
     const isEditable = target instanceof HTMLElement && (
@@ -1582,7 +3405,62 @@
       roundedRectPath(context, px + pad, py + pad, size, size, radius);
       context.stroke();
       context.restore();
+
+      drawOpenSetFLabel(geo, node, x, y, i);
     }
+  }
+
+  function drawOpenSetFLabel(geo, node, x, y, order) {
+    if (!node || !Number.isFinite(node.f)) return;
+    if (!isInside(x, y)) return;
+    if (sameCell({ x, y }, state.start) || sameCell({ x, y }, state.end)) return;
+
+    const text = `f${Math.round(node.f)}`;
+    const padX = Math.max(1.4, geo.cell * 0.055);
+    const padY = Math.max(1, geo.cell * 0.04);
+    const inset = Math.max(1.2, geo.cell * 0.055);
+    let fontSize = clamp(geo.cell * 0.27, 7, 10.5);
+
+    context.save();
+    context.font = `700 ${fontSize}px ${CANVAS_MONO}`;
+    context.textAlign = 'left';
+    context.textBaseline = 'top';
+
+    const maxTextWidth = Math.max(4, geo.cell - inset * 2 - padX * 2);
+    let textWidth = context.measureText(text).width;
+
+    if (textWidth > maxTextWidth) {
+      fontSize = Math.max(5, fontSize * (maxTextWidth / textWidth));
+      context.font = `700 ${fontSize}px ${CANVAS_MONO}`;
+      textWidth = context.measureText(text).width;
+    }
+
+    const boxWidth = textWidth + padX * 2;
+    const boxHeight = fontSize + padY * 2;
+    const boxX = geo.offsetX + x * geo.cell + inset;
+    const boxY = geo.offsetY + y * geo.cell + inset;
+
+    context.globalAlpha = order === 0 ? 0.98 : 0.86;
+    context.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    roundedRectPath(
+      context,
+      boxX,
+      boxY,
+      boxWidth,
+      boxHeight,
+      Math.max(2, geo.cell * 0.1)
+    );
+    context.fill();
+
+    context.lineWidth = 1;
+    context.strokeStyle = order === 0
+      ? 'rgba(41, 107, 232, 0.42)'
+      : 'rgba(53, 109, 243, 0.2)';
+    context.stroke();
+
+    context.fillStyle = order === 0 ? '#1f4fae' : '#3b5d8f';
+    context.fillText(text, boxX + padX, boxY + padY);
+    context.restore();
   }
 
   function drawCurrentNode(geo, current) {

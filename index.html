@@ -29,6 +29,28 @@
           <span>Canvas 动画</span>
           <span>离线可运行</span>
         </div>
+
+        <div class="assessment-entry">
+          <button class="assessment-entry-btn" id="assessmentOpenBtn" type="button" aria-haspopup="dialog" aria-controls="assessmentModal" aria-label="打开 3 分钟学习测评前测">
+            <span class="assessment-entry-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12.5" r="7.5" stroke="currentColor" stroke-width="1.7" />
+                <path d="M12 8.6v4.4l3 1.8M9.3 3.2h5.4M12 3.2v1.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+            <span class="assessment-entry-copy">
+              <span class="assessment-entry-kicker" id="assessmentEntryKicker">PRE · 前测</span>
+              <strong>3 分钟学习测评</strong>
+              <span class="assessment-entry-hint" id="assessmentEntryHint">6 道单选 · 测测你的起点</span>
+            </span>
+            <span class="assessment-entry-cta">
+              <span id="assessmentEntryCta">开始前测</span>
+              <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path d="M4 10h11M10.5 5.5 15 10l-4.5 4.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+          </button>
+        </div>
       </div>
 
       <aside class="hero-guide">
@@ -205,6 +227,497 @@
     </footer>
   </main>
 
+  <div class="assessment-backdrop" id="assessmentBackdrop" hidden></div>
+  <section class="assessment-modal" id="assessmentModal" role="dialog" aria-modal="true" aria-labelledby="assessmentTitle" aria-describedby="assessmentLead" hidden>
+    <header class="assessment-head">
+      <div class="assessment-head-copy">
+        <p class="kicker">LEARNING CHECK · 3 MIN</p>
+        <h2 id="assessmentTitle">3 分钟学习测评</h2>
+        <p class="assessment-lead" id="assessmentLead">6 道单选，覆盖 A* 与二分查找；完成后查看分数、逐题解析和前后提升。</p>
+      </div>
+      <button class="assessment-close" id="assessmentCloseBtn" type="button" aria-label="关闭学习测评">
+        <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M5 5l10 10M15 5 5 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+        </svg>
+      </button>
+    </header>
+
+    <div class="assessment-body" id="assessmentBody">
+      <section class="assessment-screen assessment-quiz" id="assessmentQuizScreen" aria-label="测评题目">
+        <div class="assessment-quiz-meta">
+          <span class="assessment-mode-pill" id="assessmentModePill">前测 · PRE</span>
+          <span class="assessment-question-counter" id="assessmentQuestionCounter">第 1 / 6 题</span>
+          <span class="assessment-storage-flag" id="assessmentStorageFlag" hidden>存储不可用</span>
+        </div>
+        <div class="assessment-progress" aria-hidden="true"><span id="assessmentProgressBar"></span></div>
+        <h3 class="assessment-question" id="assessmentQuestionText" tabindex="-1"></h3>
+        <div class="assessment-options" id="assessmentOptions" role="radiogroup" aria-labelledby="assessmentQuestionText"></div>
+        <p class="assessment-quiz-note">选择后点“下一题”；最后一题交卷后显示逐题反馈。Esc 可随时关闭。</p>
+        <div class="assessment-actions">
+          <span class="assessment-step-hint" id="assessmentStepHint">还有 5 题</span>
+          <button class="assessment-primary" id="assessmentNextBtn" type="button" disabled>下一题</button>
+        </div>
+      </section>
+
+      <section class="assessment-screen assessment-report-screen" id="assessmentReportScreen" aria-label="测评报告" hidden>
+        <div id="assessmentReport"></div>
+        <div class="assessment-actions" id="assessmentReportActions"></div>
+      </section>
+    </div>
+  </section>
+
   <script src="shared/shell.js" defer></script>
+  <script>
+    (() => {
+      'use strict';
+
+      const STORAGE_KEY = 'algorithm-playground.assessment.v1';
+      const MAX_SCORE = 6;
+
+      const QUESTIONS = [
+        {
+          text: 'A* 寻路中，节点的 f 值等于什么？',
+          options: ['g + h', 'g × h', 'h − g', 'g − h'],
+          answer: 0,
+          why: 'f(n) = g(n) + h(n)：g 是从起点到当前点的实际代价，h 是到终点的估计代价。A* 每次优先扩展 f 最小的节点，同时考虑“已经走了多少”和“看起来还差多少”。'
+        },
+        {
+          text: '在 A* 里把启发权重 w 调大，路径一定更短吗？',
+          options: ['一定更短', '不一定，可能不再是当前最短', '一定不变', '路径长度与 w 完全无关'],
+          answer: 1,
+          why: '加权 A* 常用 f = g + w·h。w 变大后更看重估计值 h，通常会扩展更少节点、跑得更快，但启发式可能不再可采纳，因此不再保证找到最短路径。'
+        },
+        {
+          text: '在 1–100 中二分查找一个数，最坏需要几次？',
+          options: ['5 次', '6 次', '7 次', '10 次'],
+          answer: 2,
+          why: '每次猜测把候选范围大约减半：100 → 50 → 25 → 13 → 7 → 4 → 2 → 1，最多 7 次就能缩到 1 个数。也可以记作 ⌈log₂100⌉ = 7。'
+        },
+        {
+          text: '二分猜数猜了 50，提示“太小”，新区间是？',
+          options: ['1–49', '1–50', '51–100', '50–100'],
+          answer: 2,
+          why: '提示“太小”说明密码大于 50，因此 low = mid + 1 = 51，新区间是 51–100；50 本身已经不可能是答案。'
+        },
+        {
+          text: '在有序数组中找第一个 2，若 mid 恰好命中 2，high 应怎样更新？',
+          options: ['high = mid', 'high = mid − 1', 'low = mid + 1', '立即返回 mid'],
+          answer: 0,
+          why: '要找第一个 2，命中后不能立刻返回：把 high = mid，保留 mid 继续向左侧收缩，最终 low 会停在第一个 2 的位置。'
+        },
+        {
+          text: '容量越大越容易撑过 8 小时。能二分搜索最小容量的关键原因是？',
+          options: ['容量组合是随机的', '可行性具有单调性', '容量越小耗时越短', '只能从小到大枚举'],
+          answer: 1,
+          why: '如果容量 c 能撑过 8 小时，那么任何更大的容量也一定能撑过，可行性随容量单调变化。因此可以二分“最小可行容量”，不必逐个枚举。'
+        }
+      ];
+
+      const MODE_TEXT = { pre: '前测 · PRE', post: '后测 · POST' };
+
+      const ui = {
+        openBtn: document.getElementById('assessmentOpenBtn'),
+        entryKicker: document.getElementById('assessmentEntryKicker'),
+        entryHint: document.getElementById('assessmentEntryHint'),
+        entryCta: document.getElementById('assessmentEntryCta'),
+        modal: document.getElementById('assessmentModal'),
+        backdrop: document.getElementById('assessmentBackdrop'),
+        closeBtn: document.getElementById('assessmentCloseBtn'),
+        body: document.getElementById('assessmentBody'),
+        quizScreen: document.getElementById('assessmentQuizScreen'),
+        reportScreen: document.getElementById('assessmentReportScreen'),
+        modePill: document.getElementById('assessmentModePill'),
+        counter: document.getElementById('assessmentQuestionCounter'),
+        storageFlag: document.getElementById('assessmentStorageFlag'),
+        progressBar: document.getElementById('assessmentProgressBar'),
+        questionText: document.getElementById('assessmentQuestionText'),
+        options: document.getElementById('assessmentOptions'),
+        nextBtn: document.getElementById('assessmentNextBtn'),
+        stepHint: document.getElementById('assessmentStepHint'),
+        report: document.getElementById('assessmentReport'),
+        reportActions: document.getElementById('assessmentReportActions')
+      };
+
+      if (Object.values(ui).some((node) => !node)) return;
+
+      const pageRoot = document.querySelector('.lobby-app');
+      let memoryState = null;
+      let storageFailed = false;
+      let lastFocused = null;
+      let quiz = { mode: 'pre', index: 0, answers: [] };
+
+      const letterFor = (index) => (
+        Number.isInteger(index) && index >= 0 ? String.fromCharCode(65 + index) : '—'
+      );
+
+      function normalizeResult(raw) {
+        if (!raw || typeof raw !== 'object' || !Array.isArray(raw.answers)) return null;
+        const answers = QUESTIONS.map((question, index) => {
+          const value = raw.answers[index];
+          return Number.isInteger(value) && value >= 0 && value < question.options.length ? value : null;
+        });
+        const score = answers.reduce(
+          (sum, answer, index) => sum + (answer === QUESTIONS[index].answer ? 1 : 0),
+          0
+        );
+        return {
+          score,
+          answers,
+          at: typeof raw.at === 'string' ? raw.at : ''
+        };
+      }
+
+      function normalizeState(raw) {
+        const state = {};
+        if (!raw || typeof raw !== 'object') return state;
+        const pre = normalizeResult(raw.pre);
+        const post = normalizeResult(raw.post);
+        if (pre) state.pre = pre;
+        if (post && pre) state.post = post;
+        return state;
+      }
+
+      function getState() {
+        if (memoryState) return memoryState;
+        let rawValue = null;
+        try {
+          rawValue = window.localStorage.getItem(STORAGE_KEY);
+        } catch (error) {
+          storageFailed = true;
+        }
+        let parsed = null;
+        if (rawValue) {
+          try {
+            parsed = JSON.parse(rawValue);
+          } catch (error) {
+            parsed = null;
+          }
+        }
+        memoryState = normalizeState(parsed);
+        return memoryState;
+      }
+
+      function syncStorageFlag() {
+        ui.storageFlag.hidden = !storageFailed;
+      }
+
+      function persistState(nextState) {
+        memoryState = nextState;
+        try {
+          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextState));
+          storageFailed = false;
+        } catch (error) {
+          storageFailed = true;
+        }
+        syncStorageFlag();
+        return !storageFailed;
+      }
+
+      function refreshEntry() {
+        const state = getState();
+        if (!state.pre) {
+          ui.entryKicker.textContent = 'PRE · 前测';
+          ui.entryHint.textContent = '6 道单选 · 测测你的起点';
+          ui.entryCta.textContent = '开始前测';
+          ui.openBtn.setAttribute('aria-label', '打开 3 分钟学习测评前测');
+        } else if (!state.post) {
+          ui.entryKicker.textContent = 'POST · 后测';
+          ui.entryHint.textContent = `前测 ${state.pre.score} / ${MAX_SCORE} · 看看现在进步多少`;
+          ui.entryCta.textContent = '开始后测';
+          ui.openBtn.setAttribute('aria-label', '打开 3 分钟学习测评后测');
+        } else {
+          ui.entryKicker.textContent = 'REPORT · 学习报告';
+          ui.entryHint.textContent = `前测 ${state.pre.score} / ${MAX_SCORE} → 后测 ${state.post.score} / ${MAX_SCORE}`;
+          ui.entryCta.textContent = '查看报告';
+          ui.openBtn.setAttribute('aria-label', '打开 3 分钟学习测评报告');
+        }
+      }
+
+      function renderQuestion(moveFocus) {
+        const question = QUESTIONS[quiz.index];
+        ui.modePill.textContent = MODE_TEXT[quiz.mode];
+        ui.counter.textContent = `第 ${quiz.index + 1} / ${QUESTIONS.length} 题`;
+        ui.progressBar.style.width = `${((quiz.index + 1) / QUESTIONS.length) * 100}%`;
+        ui.questionText.textContent = question.text;
+        ui.options.innerHTML = question.options.map((option, index) => {
+          const checked = quiz.answers[quiz.index] === index;
+          return `<label class="assessment-option${checked ? ' is-selected' : ''}">
+            <input type="radio" name="assessmentOption" value="${index}"${checked ? ' checked' : ''} />
+            <span class="assessment-option-key" aria-hidden="true">${letterFor(index)}</span>
+            <span class="assessment-option-text">${option}</span>
+          </label>`;
+        }).join('');
+        ui.nextBtn.disabled = quiz.answers[quiz.index] === null;
+        ui.nextBtn.textContent = quiz.index === QUESTIONS.length - 1 ? '交卷看报告' : '下一题';
+        const remaining = QUESTIONS.length - quiz.index - 1;
+        ui.stepHint.textContent = remaining > 0 ? `还有 ${remaining} 题` : '最后一题，交卷后查看逐题解析';
+        ui.body.scrollTop = 0;
+        syncStorageFlag();
+        if (moveFocus) ui.questionText.focus({ preventScroll: true });
+      }
+
+      function startQuiz(mode) {
+        quiz = { mode, index: 0, answers: Array(QUESTIONS.length).fill(null) };
+        ui.reportScreen.hidden = true;
+        ui.quizScreen.hidden = false;
+        ui.report.innerHTML = '';
+        ui.reportActions.innerHTML = '';
+        renderQuestion(true);
+      }
+
+      function nextQuestion() {
+        if (quiz.answers[quiz.index] === null) return;
+        if (quiz.index < QUESTIONS.length - 1) {
+          quiz.index += 1;
+          renderQuestion(true);
+          return;
+        }
+        finishQuiz();
+      }
+
+      function finishQuiz() {
+        const answers = quiz.answers.slice();
+        const score = answers.reduce(
+          (sum, answer, index) => sum + (answer === QUESTIONS[index].answer ? 1 : 0),
+          0
+        );
+        const result = { score, answers, at: new Date().toISOString() };
+        const nextState = Object.assign({}, getState());
+        nextState[quiz.mode] = result;
+        persistState(nextState);
+        refreshEntry();
+        renderReport(quiz.mode, true);
+      }
+
+      function renderReport(focusKey, justCompleted) {
+        const state = getState();
+        const pre = state.pre;
+        const post = state.post;
+        const focusIsPost = focusKey === 'post' && Boolean(post);
+        const result = focusIsPost ? post : pre;
+        if (!result) {
+          startQuiz(pre ? 'post' : 'pre');
+          return;
+        }
+
+        const delta = pre && post ? post.score - pre.score : null;
+        const deltaClass = delta > 0 ? 'is-up' : delta < 0 ? 'is-down' : 'is-flat';
+        const deltaText = delta > 0
+          ? `较前测 +${delta} 题`
+          : delta < 0
+            ? `较前测 −${Math.abs(delta)} 题`
+            : '较前测持平';
+        const modeLabel = focusIsPost ? 'POST-TEST · 后测报告' : 'PRE-TEST · 前测报告';
+        const titleText = focusIsPost ? (justCompleted ? '后测完成' : '学习报告') : '前测完成';
+        let lead;
+        if (!post) {
+          lead = `这是你的起点：${pre.score} / ${MAX_SCORE}。先去两个游戏里试试，再回来完成后测，这里会显示前后提升。`;
+        } else if (delta > 0) {
+          lead = `前测 ${pre.score} / ${MAX_SCORE} → 后测 ${post.score} / ${MAX_SCORE}，提升 ${delta} 题。带着解析再玩一遍算法，会更稳。`;
+        } else if (delta === 0) {
+          lead = `前测 ${pre.score} / ${MAX_SCORE} → 后测 ${post.score} / ${MAX_SCORE}，分数持平。逐题看完解析，再重测后测试试。`;
+        } else {
+          lead = `前测 ${pre.score} / ${MAX_SCORE} → 后测 ${post.score} / ${MAX_SCORE}，这次少了 ${Math.abs(delta)} 题。先复盘解析，再重测后测。`;
+        }
+
+        const compareRows = [
+          `<div class="assessment-compare-row is-pre">
+            <span>前测</span>
+            <span class="assessment-compare-track"><i style="width:${(pre.score / MAX_SCORE) * 100}%"></i></span>
+            <b>${pre.score} / ${MAX_SCORE}</b>
+          </div>`,
+          post
+            ? `<div class="assessment-compare-row is-post">
+                <span>后测</span>
+                <span class="assessment-compare-track"><i style="width:${(post.score / MAX_SCORE) * 100}%"></i></span>
+                <b>${post.score} / ${MAX_SCORE}</b>
+              </div>`
+            : `<div class="assessment-compare-row is-pending">
+                <span>后测</span>
+                <span class="assessment-compare-track"><i style="width:0"></i></span>
+                <b>待完成</b>
+              </div>`
+        ].join('');
+
+        const review = QUESTIONS.map((question, index) => {
+          const chosen = result.answers[index];
+          const correct = chosen === question.answer;
+          const chips = [];
+          if (pre) {
+            chips.push(`<span class="assessment-answer-chip ${pre.answers[index] === question.answer ? 'is-correct' : 'is-wrong'}">前测 ${letterFor(pre.answers[index])} ${pre.answers[index] === question.answer ? '✓' : '✗'}</span>`);
+          }
+          if (post) {
+            chips.push(`<span class="assessment-answer-chip ${post.answers[index] === question.answer ? 'is-correct' : 'is-wrong'}">后测 ${letterFor(post.answers[index])} ${post.answers[index] === question.answer ? '✓' : '✗'}</span>`);
+          }
+          const chosenText = chosen === null ? '未作答' : `${letterFor(chosen)} · ${question.options[chosen]}`;
+          return `<li class="assessment-review ${correct ? 'is-correct' : 'is-wrong'}">
+            <div class="assessment-review-head">
+              <span class="assessment-review-number">Q${index + 1}</span>
+              <h4>${question.text}</h4>
+              <span class="assessment-review-mark" aria-label="${correct ? '答对' : '答错'}">${correct ? '✓' : '✗'}</span>
+            </div>
+            <div class="assessment-review-tags">${chips.join('')}</div>
+            <p class="assessment-review-line"><strong>本次选择：</strong>${chosenText}</p>
+            <p class="assessment-review-line"><strong>正确答案：</strong>${letterFor(question.answer)} · ${question.options[question.answer]}</p>
+            <p class="assessment-review-why"><span>为什么</span>${question.why}</p>
+          </li>`;
+        }).join('');
+
+        const storageNote = storageFailed
+          ? '<p class="assessment-storage-note" role="status">本地存储不可用：本次结果只在当前页面内有效，刷新后会丢失。</p>'
+          : '';
+
+        ui.report.innerHTML = `
+          <div class="assessment-report-head">
+            <div class="assessment-report-copy">
+              <p class="kicker">${modeLabel}</p>
+              <div class="assessment-report-title-row">
+                <h3 class="assessment-report-title" tabindex="-1">${titleText}</h3>
+                ${delta !== null ? `<span class="assessment-delta ${deltaClass}">${deltaText}</span>` : ''}
+              </div>
+              <p class="assessment-report-lead">${lead}</p>
+            </div>
+            <div class="assessment-score-badge ${focusIsPost ? 'is-post' : 'is-pre'}" aria-label="${focusIsPost ? '后测' : '前测'}得分 ${result.score} 分，共 ${MAX_SCORE} 分">
+              <strong>${result.score}</strong><span>/ ${MAX_SCORE}</span>
+            </div>
+          </div>
+          <div class="assessment-compare" aria-label="前测与后测对比">${compareRows}</div>
+          <ol class="assessment-review-list">${review}</ol>
+          ${storageNote}
+        `;
+
+        ui.reportActions.innerHTML = post
+          ? `<button class="assessment-secondary" type="button" data-assessment-action="close">关闭</button>
+             <button class="assessment-primary" type="button" data-assessment-action="retake-post">重新测一次后测</button>`
+          : `<button class="assessment-secondary" type="button" data-assessment-action="close">返回大厅</button>
+             <button class="assessment-primary" type="button" data-assessment-action="start-post">开始后测</button>`;
+
+        ui.quizScreen.hidden = true;
+        ui.reportScreen.hidden = false;
+        ui.body.scrollTop = 0;
+        syncStorageFlag();
+        const reportTitle = ui.report.querySelector('.assessment-report-title');
+        if (reportTitle) reportTitle.focus({ preventScroll: true });
+      }
+
+      function openModal() {
+        lastFocused = document.activeElement;
+        const state = getState();
+        ui.backdrop.hidden = false;
+        ui.modal.hidden = false;
+        document.body.classList.add('assessment-open');
+        if (pageRoot) pageRoot.inert = true;
+        ui.body.scrollTop = 0;
+        if (state.pre && state.post) {
+          renderReport('post', false);
+        } else {
+          startQuiz(state.pre ? 'post' : 'pre');
+        }
+        syncStorageFlag();
+        window.requestAnimationFrame(() => {
+          if (!ui.modal.contains(document.activeElement)) {
+            ui.closeBtn.focus({ preventScroll: true });
+          }
+        });
+      }
+
+      function closeModal() {
+        if (ui.modal.hidden) return;
+        ui.modal.hidden = true;
+        ui.backdrop.hidden = true;
+        document.body.classList.remove('assessment-open');
+        if (pageRoot) pageRoot.inert = false;
+        refreshEntry();
+        const canRestore = lastFocused
+          && lastFocused.isConnected
+          && lastFocused !== document.body
+          && lastFocused !== document.documentElement;
+        const target = canRestore ? lastFocused : ui.openBtn;
+        target.focus({ preventScroll: true });
+      }
+
+      function tabbableElements() {
+        const nodes = Array.from(ui.modal.querySelectorAll(
+          'button:not([disabled]), input:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+        ));
+        return nodes.filter((node) => {
+          if (node.closest('[hidden]')) return false;
+          if (node.type === 'radio') {
+            const group = Array.from(ui.modal.querySelectorAll('input[type="radio"]'));
+            const checked = group.find((radio) => radio.checked);
+            return checked ? node === checked : node === group[0];
+          }
+          return node.getClientRects().length > 0;
+        });
+      }
+
+      ui.openBtn.addEventListener('click', openModal);
+      ui.closeBtn.addEventListener('click', closeModal);
+      ui.backdrop.addEventListener('click', closeModal);
+      ui.nextBtn.addEventListener('click', nextQuestion);
+
+      ui.options.addEventListener('change', (event) => {
+        const input = event.target;
+        if (!input || input.name !== 'assessmentOption') return;
+        quiz.answers[quiz.index] = Number(input.value);
+        Array.from(ui.options.querySelectorAll('.assessment-option')).forEach((label) => {
+          label.classList.toggle('is-selected', label.contains(input));
+        });
+        ui.nextBtn.disabled = false;
+      });
+
+      ui.reportActions.addEventListener('click', (event) => {
+        const actionButton = event.target.closest('[data-assessment-action]');
+        if (!actionButton) return;
+        const action = actionButton.getAttribute('data-assessment-action');
+        if (action === 'close') {
+          closeModal();
+        } else if (action === 'start-post' || action === 'retake-post') {
+          startQuiz('post');
+        }
+      });
+
+      document.addEventListener('keydown', (event) => {
+        if (ui.modal.hidden) return;
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          closeModal();
+          return;
+        }
+        if (event.key !== 'Tab') return;
+
+        const items = tabbableElements();
+        if (!items.length) {
+          event.preventDefault();
+          ui.closeBtn.focus();
+          return;
+        }
+
+        const active = document.activeElement;
+        let index = items.indexOf(active);
+        if (index === -1 && active && active.type === 'radio') {
+          const representative = items.find((node) => node.type === 'radio' && node.name === active.name);
+          if (representative) index = items.indexOf(representative);
+        }
+        if (index === -1) {
+          if (!ui.modal.contains(active)) {
+            event.preventDefault();
+            (event.shiftKey ? items[items.length - 1] : items[0]).focus();
+          }
+          return;
+        }
+        if (event.shiftKey && index === 0) {
+          event.preventDefault();
+          items[items.length - 1].focus();
+        } else if (!event.shiftKey && index === items.length - 1) {
+          event.preventDefault();
+          items[0].focus();
+        }
+      });
+
+      refreshEntry();
+      syncStorageFlag();
+    })();
+  </script>
 </body>
 </html>

@@ -71,4 +71,32 @@ assert.equal(E.manhattan(0, 0, 3, 4), 7);
 assert.equal(E.hasPath(empty, start, end), true);
 assert.equal(E.hasPath(E.generateRandomWalls(start, end), start, end), true);
 
+// 6. P1 comparison metrics.
+const compare = E.compareAlgorithms(empty, start, end);
+for (const name of ['astar', 'bfs', 'dijkstra']) {
+  assert.equal(compare[name].found, true, `${name} should find a path`);
+  assert.equal(compare[name].pathMoves, 13, `${name} path should be 13 moves`);
+  assert.ok(compare[name].expanded > 0, `${name} should expand nodes`);
+}
+assert.ok(compare.astar.expanded <= compare.bfs.expanded, 'A* should not expand more than BFS here');
+
+const compareBlocked = E.compareAlgorithms(blocked, start, end);
+for (const name of ['astar', 'bfs', 'dijkstra']) {
+  assert.equal(compareBlocked[name].found, false, `${name} should not find a path`);
+}
+
+// 7. Tie-break options are accepted and preserve path length.
+const hTrace = E.findPathTrace(empty, start, end, { tieBreak: 'h' });
+const keyTrace = E.findPathTrace(empty, start, end, { tieBreak: 'key' });
+assert.equal(hTrace.metrics.pathMoves, keyTrace.metrics.pathMoves);
+assert.ok(hTrace.visited.length > 0 && keyTrace.visited.length > 0);
+
+// 8. Heuristic weight is accepted; w=0 still finds a path.
+const weightedTrace = E.findPathTrace(empty, start, end, { heuristicWeight: 0 });
+assert.equal(weightedTrace.found, true);
+assert.equal(weightedTrace.metrics.pathMoves, 13);
+const weightedCompare = E.compareAlgorithms(empty, start, end, { heuristicWeight: 2 });
+assert.equal(weightedCompare.astar.found, true);
+assert.ok(weightedCompare.astar.expanded > 0);
+
 console.log('astar-engine tests passed');

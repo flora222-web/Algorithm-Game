@@ -91,11 +91,25 @@
     }
   }
 
-  function compareNodes(a, b) {
-    if (a.f !== b.f) return a.f - b.f;
-    if (a.h !== b.h) return a.h - b.h;
-    return a.key - b.key;
+  function createNodeComparator(tieBreak = 'h') {
+    return function compare(a, b) {
+      if (a.f !== b.f) return a.f - b.f;
+
+      if (tieBreak === 'g') {
+        if (a.g !== b.g) return b.g - a.g;
+        return a.key - b.key;
+      }
+
+      if (tieBreak === 'key') {
+        return a.key - b.key;
+      }
+
+      if (a.h !== b.h) return a.h - b.h;
+      return a.key - b.key;
+    };
   }
+
+  const compareNodes = createNodeComparator('h');
 
   function now() {
     return typeof performance !== 'undefined' && typeof performance.now === 'function'
@@ -164,11 +178,19 @@
     return result;
   }
 
-  function findPathTrace(walls, start, end) {
+  function findPathTrace(walls, start, end, options = {}) {
+    const tieBreak = options.tieBreak === 'g' || options.tieBreak === 'key'
+      ? options.tieBreak
+      : 'h';
+    const requestedWeight = Number(options.heuristicWeight);
+    const heuristicWeight = Number.isFinite(requestedWeight)
+      ? Math.max(0, requestedWeight)
+      : 1;
+    const compare = createNodeComparator(tieBreak);
     const startedAt = now();
     const startKey = toKey(start.x, start.y);
     const endKey = toKey(end.x, end.y);
-    const open = new MinHeap(compareNodes);
+    const open = new MinHeap(compare);
     const gScore = new Float64Array(CELL_COUNT);
     const cameFrom = new Int32Array(CELL_COUNT);
     const closed = new Uint8Array(CELL_COUNT);
@@ -215,7 +237,7 @@
 
     const startH = manhattan(start.x, start.y, end.x, end.y);
     gScore[startKey] = 0;
-    open.push({ key: startKey, g: 0, h: startH, f: startH });
+    open.push({ key: startKey, g: 0, h: startH, f: heuristicWeight * startH });
 
     while (open.size > 0) {
       const current = open.pop();
@@ -232,7 +254,7 @@
       const openItems = collectOpen(open, closed, gScore);
       const openTop = openItems
         .slice()
-        .sort(compareNodes)
+        .sort(compare)
         .slice(0, 5)
         .map((item) => {
           const point = fromKey(item.key);
@@ -300,12 +322,152 @@
           key: neighborKey,
           g: tentativeG,
           h,
-          f: tentativeG + h
+          f: tentativeG + heuristicWeight * h
         });
       }
     }
 
     return finish(false, []);
+  }
+
+  function searchBfs(walls, start, end) {
+    const startedAt = now();
+
+    if (!start || !end || !isInside(start.x, start.y) || !isInside(end.x, end.y)) {
+      return { found: false, pathMoves: 0, expanded: 0, computeMs: now() - startedAt };
+    }
+
+    const startKey = toKey(start.x, start.y);
+    const endKey = toKey(end.x, end.y);
+    const parent = new Int32Array(CELL_COUNT);
+    const seen = new Uint8Array(CELL_COUNT);
+    const queue = new Int32Array(CELL_COUNT);
+    let head = 0;
+    let tail = 0;
+    let expanded = 0;
+
+    parent.fill(-1);
+    queue[tail] = startKey;
+    tail += 1;
+    seen[startKey] = 1;
+
+    while (head < tail) {
+      const key = queue[head];
+      head += 1;
+      expanded += 1;
+
+      if (key === endKey) {
+        const path = buildPath(parent, startKey, endKey);
+        return {
+          found: path.length > 0,
+          pathMoves: Math.max(0, path.length - 1),
+          expanded,
+          computeMs: now() - startedAt
+        };
+      }
+
+      const x = key % GRID_SIZE;
+      const y = Math.floor(key / GRID_SIZE);
+
+      for (const [dx, dy] of DIRECTIONS) {
+        const nx = x + dx;
+        const ny = y + dy;
+
+        if (isBlocked(walls, nx, ny, start, end)) continue;
+
+        const neighborKey = toKey(nx, ny);
+        if (seen[neighborKey]) continue;
+
+        seen[neighborKey] = 1;
+        parent[neighborKey] = key;
+        queue[tail] = neighborKey;
+        tail += 1;
+      }
+    }
+
+    return { found: false, pathMoves: 0, expanded, computeMs: now() - startedAt };
+  }
+
+  function searchDijkstra(walls, start, end) {
+    const startedAt = now();
+
+    if (!start || !end || !isInside(start.x, start.y) || !isInside(end.x, end.y)) {
+      return { found: false, pathMoves: 0, expanded: 0, computeMs: now() - startedAt };
+    }
+
+    const startKey = toKey(start.x, start.y);
+    const endKey = toKey(end.x, end.y);
+    const open = new MinHeap((a, b) => {
+      if (a.g !== b.g) return a.g - b.g;
+      return a.key - b.key;
+    });
+    const gScore = new Float64Array(CELL_COUNT);
+    const parent = new Int32Array(CELL_COUNT);
+    const closed = new Uint8Array(CELL_COUNT);
+    let expanded = 0;
+
+    gScore.fill(Infinity);
+    parent.fill(-1);
+    gScore[startKey] = 0;
+    open.push({ key: startKey, g: 0 });
+
+    while (open.size > 0) {
+      const current = open.pop();
+
+      if (closed[current.key] || current.g !== gScore[current.key]) continue;
+
+      closed[current.key] = 1;
+      expanded += 1;
+
+      if (current.key === endKey) {
+        const path = buildPath(parent, startKey, endKey);
+        return {
+          found: path.length > 0,
+          pathMoves: Math.max(0, path.length - 1),
+          expanded,
+          computeMs: now() - startedAt
+        };
+      }
+
+      const x = current.key % GRID_SIZE;
+      const y = Math.floor(current.key / GRID_SIZE);
+
+      for (const [dx, dy] of DIRECTIONS) {
+        const nx = x + dx;
+        const ny = y + dy;
+
+        if (isBlocked(walls, nx, ny, start, end)) continue;
+
+        const neighborKey = toKey(nx, ny);
+        if (closed[neighborKey]) continue;
+
+        const nextG = current.g + 1;
+        if (nextG >= gScore[neighborKey]) continue;
+
+        gScore[neighborKey] = nextG;
+        parent[neighborKey] = current.key;
+        open.push({ key: neighborKey, g: nextG });
+      }
+    }
+
+    return { found: false, pathMoves: 0, expanded, computeMs: now() - startedAt };
+  }
+
+  function compareAlgorithms(walls, start, end, options = {}) {
+    const astarTrace = findPathTrace(walls, start, end, options);
+    const bfs = searchBfs(walls, start, end);
+    const dijkstra = searchDijkstra(walls, start, end);
+
+    return {
+      astar: {
+        found: astarTrace.found,
+        pathMoves: astarTrace.metrics.pathMoves,
+        expanded: astarTrace.metrics.expanded,
+        computeMs: astarTrace.metrics.computeMs
+      },
+      bfs,
+      dijkstra
+    };
   }
 
   function hasPath(walls, start, end) {
@@ -383,6 +545,9 @@
     isInside,
     hasPath,
     generateRandomWalls,
-    findPathTrace
+    findPathTrace,
+    searchBfs,
+    searchDijkstra,
+    compareAlgorithms
   };
 })();
